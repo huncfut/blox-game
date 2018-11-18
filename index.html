@@ -2,12 +2,15 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
-    <!-- Using createJs graphic engine -->
-    <script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/createjs.js"></script>
+    <script src="js/test.js"></script>
     <title>Blox Game</title>
   </head>
   <body onload="init()">
-    <canvas id="demoCanvas" width="500" height="300"></canvas>
+    <canvas id="demoCanvas" width="512" height="512" style="border:1px solid #000000;"></canvas>
+    <button onClick="connect()">Connect</button>
+    <button onClick="spawn()">Spawn</button>
+    <!-- <input type="text" />
+    <button onClick="spawn()">Submit</button> -->
   </body>
 </html>

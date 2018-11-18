@@ -1,0 +1,13 @@
+{
+  "ecmaVersion": 6,
+  "libs": [],
+  "loadEagerly": [
+    "js/createjs.js"
+  ],
+  "dontLoad": [
+    "node_modules/**"
+  ],
+  "plugins": {
+    "doc_comment": true
+  }
+}
