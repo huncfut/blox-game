@@ -1,118 +1,139 @@
 const WebSocket = require('ws');
+const env = require('./env.js');
 //const msgpack = require('msgpack-lite');
 
-const server = new WebSocket.Server({ port: 8082 });
-const MAX_SPEED = 10
-const TICK = 20
+const server = new WebSocket.Server({
+  port: env.PORT
+})
 
-const GAME_WIDTH = 3840
-const GAME_HEIGHT = 2160
-
-let players = {};
+let players = {}
 
 class Player {
-  constructor(ws) {
+  constructor(ws, id) {
+    this.id = id;
+    this.TICK = 0;
     this.ws = ws;
-    this.velocity = 0;
-    this.moveXAxis = 0;
-    this.moveYAxis = 0;
-    this.x = 0;
-    this.y = 0;
-    this.uHeld;
-    this.dHeld;
-    this.lHeld;
-    this.rHeld;
-    this.isStunned;
-    this.stunTime;
-	this.velx = this.vely = 0;
+    this.moveXAxis = this.moveYAxis = 0
+    this.x = this.y = 0
+    this.uHeld = this.dHeld = this.lHeld = this.rHeld = false
+    this.isStunned = false
+    this.stunTime = 0
   }
-  update() {
-    // stun
-    if(this.stunTime > 0) {
-      this.stunTime -= 1
-    }
-    this.isStunned = this.stunTime > 0 ? true : false
-
-    // speed
-    this.moveXAxis *= (11/12) ** (60/TICK)
-    this.moveYAxis *= (11/12) ** (60/TICK)
-
-    if(!this.isStunned) {
-      if (this.rHeld === true) {
-        this.moveXAxis = Math.min(this.moveXAxis + TICK/6, TICK)
+  move(data) {
+    for (var axis of data.array) {
+      this.moveXAxis = axis.xAxis;
+      this.moveYAxis = axis.yAxis
+      let angle = Math.atan2(axis.yAxis, axis.xAxis)
+      if (axis.xAxis !== 0) {
+        this.x += env.MAX_SPEED / 60 * Number(Math.cos(angle).toFixed(5)) * Math.abs(axis.xAxis)
       }
-      if (this.lHeld === true) {
-        this.moveXAxis = Math.max(this.moveXAxis - TICK/6, -TICK)
-      }
-      if (this.uHeld === true) {
-        this.moveYAxis = Math.min(this.moveYAxis + TICK/6, TICK)
-      }
-      if (this.dHeld === true) {
-        this.moveYAxis = Math.max(this.moveYAxis - TICK/6, -TICK)
+      if (axis.yAxis !== 0) {
+        this.y -= env.MAX_SPEED / 60 * Number(Math.sin(angle).toFixed(5)) * Math.abs(axis.yAxis)
       }
     }
-    this.move();
-	   if(this.ws.readyState==1) {
-		this.send({ opcode: 'pos', x: this.x, y: this.y });
-	}
+    this.send({
+      opcode: "pos",
+      x: this.x,
+      y: this.y
+    })
+    this.boardcast({
+      opcode: "posO",
+      id: this.id,
+      x: this.x,
+      y: this.y,
+      xAxis: this.moveXAxis,
+      yAxis: this.moveYAxis
+    })
   }
-  move() {
-    if (!this.isStunned) {
-		console.log(this.moveXAxis, this.moveYAxis)
-		if(this.moveXAxis !== 0) {
-			this.x += MAX_SPEED / TICK * Number(Math.cos(Math.atan2(Math.sign(this.moveYAxis), Math.sign(this.moveXAxis))).toFixed(5)) * Math.abs(this.moveXAxis) * 60/TICK
-		}
-		if(this.moveYAxis !== 0) {
-			this.y -= MAX_SPEED / TICK * Number(Math.sin(Math.atan2(Math.sign(this.moveYAxis), Math.sign(this.moveXAxis))).toFixed(5)) * Math.abs(this.moveYAxis) * 60/TICK
-		}
+  boardcast(data) {
+    for (let id in players) {
+      if (this.id != players[id].id) {
+        players[id].send(data)
+      }
     }
   }
   handlePacket(packet) {
-    switch(packet.opcode) {
-      case "held":
-      this.changeHelds(packet);
-      break;
+    switch (packet.opcode) {
+      case "axis":
+        this.move(packet)
+        break
       case "spawn":
-      this.spawn(packet);
-      break;
+        this.spawn(packet)
+        break
     }
   }
-  changeHelds(helds) {
-	  console.log(helds)
-    this.dHeld = helds.dHeld
-    this.uHeld = helds.uHeld
-    this.lHeld = helds.lHeld
-    this.rHeld = helds.rHeld
-  }
   spawn(data) {
+	if(this.spawned) return;
+    for (var id in players) {
+      if (this.id != id && players[id].spawned) {
+        this.send({
+          opcode: "spawnedO",
+          x: players[id].x,
+          y: players[id].y,
+          nick: players[id].nick,
+          id: players[id].id
+        })
+      }
+    }
+    this.nick = data.nick;
     this.spawned = true;
-    this.x = ~~(Math.random()*512);
-    this.y = ~~(Math.random()*512);
-
-    this.send({opcode: "spawned", x: this.x, y: this.y})
-    //this.send({ opcode: 'pos', x: this.x, y: this.y });
+    this.x = ~~(Math.random() * 512)
+    this.y = ~~(Math.random() * 512)
+    this.send({
+      opcode: "spawned",
+      x: this.x,
+      y: this.y
+    })
+    this.boardcast({
+      opcode: "spawnedO",
+      x: this.x,
+      y: this.y,
+      nick: this.nick,
+      id: this.id
+    })
   }
   send(data) {
-    this.ws.send(JSON.stringify(data))
+    if (this.ws.readyState == 1) {
+      this.ws.send(JSON.stringify(data))
+    }
   }
 }
 
-setInterval(() => {
-	for(let i in players) {
-		player = players[i]
-    if(player.spawned) {
-      player.update();
+// const fireShot = (x, y, target) => {
+//   shot = {x, y}
+//   distance = utils.distance(shot, target);
+//   velocity = 100
+//   [x1, x2] = utils.pointOnLine(shot, target, );
+//   time = distance / velocity
+//   shot.rotation = Math.atan2(target.y - y, target.x - x) * 180 / Math.PI
+//   createjs.Tween.get(shot, {
+//       loop: false
+//     })
+//     .to({
+//       x: target.x,
+//       y: target.y
+//     }, time)
+//   return shot
+// }
+
+/*setInterval(() => {
+  for (let i in players) {
+    player = players[i]
+    if (player.spawned) {
+      player.update()
     }
-	}
-}, 1000/20);
+  }
+}, 1000 / env.TICK);*/
+
+let uuid = 0;
 
 const generateUUID = () => {
-  return `${(~~(Math.random()*0xffffff)).toString(16)}-${(~~(Math.random()*0xffffff)).toString(16)}-${(~~(Math.random()*0xffffff)).toString(16)}-${(~~(Math.random()*0xffffff)).toString(16)}`
+  return uuid++;
 }
 
 server.on('connection', ws => {
-	ws.on('close', console.log)
-	ws.on('error', console.log)
+  ws.on('close', console.log)
+  ws.on('error', console.log)
   let uuid = generateUUID();
   players[uuid] = new Player(ws, uuid);
   ws.on('message', message => {
