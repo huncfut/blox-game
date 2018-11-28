@@ -15,7 +15,12 @@ var init = () => {
 
 function onTick() {
   if(player) {
-    player.update()
+    sendHelds({
+      uHeld,
+      dHeld,
+      lHeld,
+      rHeld
+    })
   }
   for(enemy in players) {
     players[enemy].rotate()
@@ -117,9 +122,9 @@ const connect = () => {
   }
 }
 
-const sendAxis = (array) => {
+const sendHelds = (data) => {
   ws.send(JSON.stringify({
-    opcode: 'axis',
-    array: array
+    opcode: 'helds',
+    data
   }))
 }

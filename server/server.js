@@ -11,26 +11,18 @@ let players = {}
 class Player {
   constructor(ws, id) {
     this.id = id;
-    this.TICK = 0;
     this.ws = ws;
     this.moveXAxis = this.moveYAxis = 0
     this.x = this.y = 0
     this.uHeld = this.dHeld = this.lHeld = this.rHeld = false
-    this.isStunned = false
-    this.stunTime = 0
   }
-  move(data) {
-    for (var axis of data.array) {
-      this.moveXAxis = axis.xAxis;
-      this.moveYAxis = axis.yAxis
-      let angle = Math.atan2(axis.yAxis, axis.xAxis)
-      if (axis.xAxis !== 0) {
-        this.x += env.MAX_SPEED / 60 * Number(Math.cos(angle).toFixed(5)) * Math.abs(axis.xAxis)
-      }
-      if (axis.yAxis !== 0) {
-        this.y -= env.MAX_SPEED / 60 * Number(Math.sin(angle).toFixed(5)) * Math.abs(axis.yAxis)
-      }
-    }
+  doPlayer(data) {
+    this.uHeld = data.uHeld
+    this.dHeld = data.dHeld
+    this.lHeld = data.lHeld
+    this.rHeld = data.rHeld
+    calcAxis()
+    move()
     this.send({
       opcode: "pos",
       x: this.x,
@@ -45,6 +37,31 @@ class Player {
       yAxis: this.moveYAxis
     })
   }
+  calcAxis() {
+    this.moveXAxis *= (11 / 12)
+    this.moveYAxis *= (11 / 12)
+    if(this.rHeld === true) {
+      this.moveXAxis = Math.min(this.moveXAxis + 10, 60)
+    }
+    if(this.lHeld === true) {
+      this.moveXAxis = Math.max(this.moveXAxis - 10, -60)
+    }
+    if(this.uHeld === true) {
+      this.moveYAxis = Math.min(this.moveYAxis + 10, 60)
+    }
+    if(this.dHeld === true) {
+      this.moveYAxis = Math.max(this.moveYAxis - 10, -60)
+    }
+  }
+  move() {
+    let angle = Math.atan2(this.moveYAxis, this.moveXAxis)
+    if (axis.xAxis !== 0) {
+      this.x += env.MAX_SPEED / 60 * Number(Math.cos(angle).toFixed(5)) * Math.abs(this.moveXAxis)
+    }
+    if (axis.yAxis !== 0) {
+      this.y -= env.MAX_SPEED / 60 * Number(Math.sin(angle).toFixed(5)) * Math.abs(this.moveYAxis)
+    }
+  }
   boardcast(data) {
     for (let id in players) {
       if (this.id != players[id].id) {
@@ -54,8 +71,8 @@ class Player {
   }
   handlePacket(packet) {
     switch (packet.opcode) {
-      case "axis":
-        this.move(packet)
+      case "helds":
+        this.doPlayer(packet)
         break
       case "spawn":
         this.spawn(packet)
