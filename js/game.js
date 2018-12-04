@@ -15,6 +15,7 @@ var init = () => {
 
 function onTick() {
   if(player) {
+    console.log(uHeld)
     sendHelds({
       uHeld,
       dHeld,
@@ -114,10 +115,10 @@ const connect = () => {
       players[data.id].draw('beginFill', 'black');
     }
     if (data.opcode == "posO") {
-      players[data.id].doEnemy(data.x, data.y, data.xAxis, data.yAxis);
+      players[data.id].update(data)
     }
     if (data.opcode == "pos") {
-      player.setCoords1(data.x, data.y)
+      player.update(data)
     }
   }
 }

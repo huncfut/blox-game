@@ -22,19 +22,11 @@ class Player {
       this.shape.rotation += 45 / TICK
     }
   }
-  send() {
-    sendHelds({
-      uHeld,
-      dHeld,
-      lHeld,
-      rHeld
-    })
-  }
-  update(x, y, v) {
-    this.v = v
-    this.x = x
-    this.y = y
-    rotate()
+  update(data) {
+    this.v = data.v
+    this.x = data.x
+    this.y = data.y
+    this.rotate()
     createjs.Tween.get(this.shape, {loop: false})
       .to({
         x: this.x,

@@ -16,26 +16,30 @@ class Player {
     this.x = this.y = 0
     this.uHeld = this.dHeld = this.lHeld = this.rHeld = false
   }
-  doPlayer(data) {
+  doPlayer({data}) {
     this.uHeld = data.uHeld
     this.dHeld = data.dHeld
     this.lHeld = data.lHeld
     this.rHeld = data.rHeld
-    calcAxis()
-    move()
+    this.calcAxis()
+    this.calcV()
+    this.move()
     this.send({
       opcode: "pos",
       x: this.x,
-      y: this.y
+      y: this.y,
+      v: this.v
     })
     this.boardcast({
       opcode: "posO",
       id: this.id,
       x: this.x,
       y: this.y,
-      xAxis: this.moveXAxis,
-      yAxis: this.moveYAxis
+      v: this.v
     })
+  }
+  calcV() {
+    this.v = Math.sqrt(this.moveXAxis ** 2 + this.moveYAxis ** 2)
   }
   calcAxis() {
     this.moveXAxis *= (11 / 12)
@@ -55,10 +59,10 @@ class Player {
   }
   move() {
     let angle = Math.atan2(this.moveYAxis, this.moveXAxis)
-    if (axis.xAxis !== 0) {
+    if (this.moveXAxis !== 0) {
       this.x += env.MAX_SPEED / 60 * Number(Math.cos(angle).toFixed(5)) * Math.abs(this.moveXAxis)
     }
-    if (axis.yAxis !== 0) {
+    if (this.moveYAxis !== 0) {
       this.y -= env.MAX_SPEED / 60 * Number(Math.sin(angle).toFixed(5)) * Math.abs(this.moveYAxis)
     }
   }

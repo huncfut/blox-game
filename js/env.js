@@ -15,5 +15,5 @@ const GAME_HEIGHT = 2160
 
 const TICK = 60
 
-const IP = "145.239.28.185"
+const IP = "localhost"
 const PORT = 8082
