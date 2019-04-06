@@ -1,12 +1,13 @@
+// Przepisać!!!
+
 class Player {
-  constructor(x, y) {
+  constructor(position) {
     this.ticks = 0;
     this.shape = new createjs.Shape();
-    this.shape.x = x
-    this.shape.y = y
+    this.shape.x = position.x
+    this.shape.y = position.y
     this.shape.rotation = 0
-    this.x = x
-    this.y = y
+    this.position = position
     this.v = 0
     this.hasShield = false
     this.shotStream = []
@@ -24,13 +25,12 @@ class Player {
   }
   update(data) {
     this.v = data.v
-    this.x = data.x
-    this.y = data.y
+    this.position = data.position
     this.rotate()
     createjs.Tween.get(this.shape, {loop: false})
       .to({
-        x: this.x,
-        y: this.y
+        x: 0,
+        y: 0
       }, 1000 / TICK, createjs.Ease.Linear)
   }
   changeColor(color) {
@@ -39,12 +39,15 @@ class Player {
   }
   destroy() {
     for(let i = 0; i < 30; i++) {
-      makeParticle(this.x, this.y, utils.random(this.x-150, this.x+150), utils.random(this.y-150, this.y+150), 12)
+      makeParticle(
+        this.position.x, this.position.y,
+        utils.random(this.position.x-150, this.position.x+150),
+        utils.random(this.position.y-150, this.position.y+150), 12)
     }
     this.graphics.clear();
   }
   draw(type, color) {
-    this.shape.graphics[type](color).drawRect(0, 0, this.size, this.size);
+    this.shape.graphics[type](color).drawRect(this.position.x, this.position.y, this.size, this.size);
     this.shape.regX = this.shape.regY = this.size / 2;
     stage.addChild(this.shape);
   }

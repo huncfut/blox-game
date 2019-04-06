@@ -1,3 +1,7 @@
+// może przepisać !!!
+// TDD
+//
+
 const WebSocket = require('ws');
 const env = require('./env.js');
 //const msgpack = require('msgpack-lite');
@@ -7,7 +11,13 @@ const env = require('./env.js');
 //   y: Math.cos(velocity.angle)*velocity.val
 // }
 
-
+const limitedVelocity = (moveAxis) => {
+  let vLen = Math.sqrt(moveAxis.x**2 + moveAxis.y**2)
+  return {
+    x: moveAxis.x / vLen * env.MAX_SPEED,
+    y: moveAxis.y / vLen * env.MAX_SPEED
+  }
+}
 
 function rotate(velocity, angle) {
   const rotatedVelocities = {
@@ -51,18 +61,35 @@ const server = new WebSocket.Server({
 
 let players = {}
 
-setInterval(()=>{
-  for(var id in players) {
-    if(!players[id].spawned) continue;
-    players[id].calcAxis()
-    players[id].calcV()
-    players[id].move()
-    players[id].send({
+const send = (id) => {
+  if(wsList[id].readyState == 1) {
+    wsList[id].send(JSON.stringify({
       opcode: "pos",
       x: players[id].x,
       y: players[id].y,
       v: players[id].v
-    })
+    }))
+  }
+}
+
+const broadcast = () => {
+  // Ogarnąć wszystko (ws)
+}
+
+setInterval(()=>{
+  let newPlayers = {}
+  for(var id in players) {
+    players[id].calcAxis()
+  }
+  for(var id in players) {
+    newPlayers.push(players[id].move())
+    // nowe pozycje (obiekty) do newPlayers
+    // REFERENCJE
+  }
+  players = newPlayers
+  for(var id in players) {
+    if(!players[id].spawned) continue;
+    send(id)
     players[id].boardcast({
       opcode: "posO",
       id: players[id].id,
@@ -74,11 +101,10 @@ setInterval(()=>{
 }, 50/3)
 
 class Player {
-  constructor(ws, id) {
+  constructor(id) {
     this.velocity = {}
     this.mass = 1
-    this.id = id;
-    this.ws = ws;
+    this.id = id
     this.r = 14
     this.moveAxis = {
       x: 0,
@@ -92,9 +118,6 @@ class Player {
     this.dHeld = data.dHeld
     this.lHeld = data.lHeld
     this.rHeld = data.rHeld
-  }
-  calcV() {
-    this.v = Math.sqrt(this.moveAxis.x ** 2 + this.moveAxis.y ** 2)
   }
   calcAxis() {
     this.moveAxis.x *= (11 / 12)
@@ -112,49 +135,45 @@ class Player {
       this.moveAxis.y = Math.max(this.moveAxis.y - 10, -60)
     }
   }
+
   distance(player) {
     return Math.sqrt((this.x - player.x)**2 + (this.y - player.y)**2)
   }
 
-  calcVelocity() {
-    this.velocity.val = Math.sqrt(this.moveAxis.x ** 2 + this.moveAxis.y ** 2)
-  }
-
   move() {
-    let angle = Math.atan2(this.moveAxis.y, this.moveAxis.x)
-    let nextX = env.MAX_SPEED / 60 * Number(Math.cos(angle).toFixed(5)) * Math.abs(this.moveAxis.x)
-    let nextY = -env.MAX_SPEED / 60 * Number(Math.sin(angle).toFixed(5)) * Math.abs(this.moveAxis.y)
-    this.x+=nextX;
-    this.y+=nextY;
+    console.log(this)
+    let newPlayer = JSON.parse(JSON.stringify(this))
+    let v = limitedVelocity(newPlayer.moveAxis)
     for (let id in players) {
-      if (this.id != players[id].id) {
-        if(this.distance(players[id]) <= this.r + players[id].r) {
+      if (newPlayer.id != players[id].id) {
+        if(newPlayer.distance(players[id]) <= newPlayer.r + players[id].r) {
           console.log('asd')
-          resolveCollision(this, players[id])
-          return
+          resolveCollision(newPlayer, players[id])
+          return newPlayer
         }
       }
     }
-    this.x-=nextX;
-    this.y-=nextY;
-    if(!this.isStunned) {
-      this.velocity.x = nextX
-      this.velocity.y = nextY
+    newPlayer.x-=nextX;
+    newPlayer.y-=nextY;
+    if(!newPlayer.isStunned) {
+      newPlayer.velocity.x = nextX
+      newPlayer.velocity.y = nextY
     }
-    this.x += this.velocity.x
-    this.y += this.velocity.y
-    this.velocity.x *= 11/12
-    this.velocity.y *= 11/12
-    if(this.x + this.r > 512) {
-      this.x = 512 - this.r
-    } else if(this.x - this.r < 0) {
-      this.x = 0 + this.r
+    newPlayer.x += newPlayer.velocity.x
+    newPlayer.y += newPlayer.velocity.y
+    newPlayer.velocity.x *= 11/12
+    newPlayer.velocity.y *= 11/12
+    if(newPlayer.x + newPlayer.r > 512) {
+      newPlayer.x = 512 - newPlayer.r
+    } else if(newPlayer.x - newPlayer.r < 0) {
+      newPlayer.x = 0 + newPlayer.r
     }
-    if(this.y + this.r > 512) {
-      this.y = 512 - this.r
-    } else if(this.y - this.r < 0) {
-      this.y = 0 + this.r
+    if(newPlayer.y + newPlayer.r > 512) {
+      newPlayer.y = 512 - newPlayer.r
+    } else if(newPlayer.y - newPlayer.r < 0) {
+      newPlayer.y = 0 + newPlayer.r
     }
+    return newPlayer
   }
   boardcast(data) {
     for (let id in players) {
@@ -203,11 +222,7 @@ class Player {
       id: this.id
     })
   }
-  send(data) {
-    if (this.ws.readyState == 1) {
-      this.ws.send(JSON.stringify(data))
-    }
-  }
+
 }
 
 // const fireShot = (x, y, target) => {
@@ -242,14 +257,18 @@ const generateUUID = () => {
   return uuid++;
 }
 
+let wsList = {}
+
 server.on('connection', ws => {
   ws.on('close', console.log)
   ws.on('error', console.log)
   let uuid = generateUUID();
-  players[uuid] = new Player(ws, uuid);
+  wsList[uuid] = ws
+  players[uuid] = new Player(uuid);
   ws.on('message', message => {
     message = message.toString();
     data = JSON.parse(message);
+    console.log(data)
     players[uuid].handlePacket(data);
   });
 });

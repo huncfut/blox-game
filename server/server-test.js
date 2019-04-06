@@ -201,7 +201,7 @@ class Player {
     }
   }
   spawn(data) {
-	if(this.spawned) return;
+	  if(this.spawned) return;
     for (var id in players) {
       if (this.id != id && players[id].spawned) {
         this.send({
