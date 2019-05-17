@@ -1,7 +1,9 @@
-let uHeld = false
-let dHeld = false
-let lHeld = false
-let rHeld = false
+let held = {
+  up: false,
+  down: false,
+  left: false,
+  right: false
+}
 var player, stage, ws;
 
 var init = () => {
@@ -15,7 +17,9 @@ var init = () => {
 
 function onTick() {
   if(player) {
-    player.update()
+    sendHelds({
+      held
+    })
   }
   for(enemy in players) {
     players[enemy].rotate()
@@ -51,19 +55,19 @@ const handleKeyDown = e => {
   switch (e.keyCode) {
     case KEYCODE_W:
     case KEYCODE_ARROW_UP:
-      uHeld = true;
+      held.up = true;
       break
     case KEYCODE_S:
     case KEYCODE_ARROW_DOWN:
-      dHeld = true;
+      held.down = true;
       break
     case KEYCODE_A:
     case KEYCODE_ARROW_LEFT:
-      lHeld = true
+      held.left = true
       break
     case KEYCODE_D:
     case KEYCODE_ARROW_RIGHT:
-      rHeld = true
+      held.right = true
       break;
   }
 }
@@ -72,54 +76,63 @@ const handleKeyUp = e => {
   switch (e.keyCode) {
     case KEYCODE_W:
     case KEYCODE_ARROW_UP:
-      uHeld = false
+      held.up = false
       break
     case KEYCODE_S:
     case KEYCODE_ARROW_DOWN:
-      dHeld = false
+      held.down = false
       break
     case KEYCODE_A:
     case KEYCODE_ARROW_LEFT:
-      lHeld = false
+      held.left = false
       break
     case KEYCODE_D:
     case KEYCODE_ARROW_RIGHT:
-      rHeld = false
+      held.right = false
       break
   }
 }
 
 let players = {};
 
+const drawPlayer = (player, type, color) => {
+  player.shape.graphics[type](color).drawRect(player.position.x, player.position.y, player.size, player.size);
+  player.shape.regX = player.shape.regY = player.size / 2;
+  stage.addChild(player.shape);
+}
 // Server connection
 const connect = () => {
   ws.send(JSON.stringify({
     opcode: 'spawn',
-    nick: 'xd'
+    data: {
+      nick: "xd"
+    }
   }));
   ws.onmessage = event => {
+    console.log(event)
     data = JSON.parse(event.data);
     if (data.opcode == "spawned") {
       console.log(data);
-      player = new Player(data.x, data.y);
-      player.draw('beginStroke', 'black');
+      player = new Player(data.position);
+      drawPlayer(player, 'beginStroke', 'black');
     }
     if (data.opcode == "spawnedO") {
-      players[data.id] = new Player(data.x, data.y);
-      players[data.id].draw('beginFill', 'black');
+      players[data.id] = new Player(data.position);
+      drawPlayer(players[data.id], 'beginFill', 'black');
     }
     if (data.opcode == "posO") {
-      players[data.id].doEnemy(data.x, data.y, data.xAxis, data.yAxis);
+      players[data.id].update(data)
     }
     if (data.opcode == "pos") {
-      player.setCoords1(data.x, data.y)
+
+      player.update(data)
     }
   }
 }
 
-const sendAxis = (array) => {
+const sendHelds = data => {
   ws.send(JSON.stringify({
-    opcode: 'axis',
-    array: array
+    opcode: 'helds',
+    data
   }))
 }
