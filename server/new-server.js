@@ -21,11 +21,12 @@ const generateUUID = () => uuid++
 
 const calcNewPlayer = id => {
   const player = players[id]
-  const newPlayer = new Player(id, player.held, player.r)
-  newPlayer.acceleration = physics.calcAcceleration(newPlayer.held, newPlayer.acceleration)
-  newPlayer.velocity = physics.calcVelocity(newPlayer.acceleration, player.velocity)
-  newPlayer.position = physics.calcPosition(newPlayer.velocity, player.position)
-  newPlayer.spawned = player.spawned
+  const newPlayer = new Player(id, player.held, player.r, player.spawned)
+  const dTime = (newPlayer.lastCalcTime - player.lastCalcTime) / 1000
+  console.log("dTime:", dTime)
+  newPlayer.acceleration = physics.calcAcceleration(newPlayer.held, player.velocity, dTime)
+  newPlayer.velocity = physics.calcVelocity(newPlayer.acceleration, player.velocity, dTime)
+  newPlayer.position = physics.calcPosition(newPlayer.acceleration, newPlayer.velocity, player.position, dTime)
   return newPlayer
 }
 
@@ -41,10 +42,12 @@ setInterval(() => {
   for(let id in players) {
     newPlayers.push(calcNewPlayer(id))
   }
+
   // for(let id in players) {
   //   // Collisions
   // }
   players = newPlayers
+  console.log(players)
   for(let id in players) {
     if(!players[id].spawned) continue;
     send(id, {
@@ -59,14 +62,15 @@ setInterval(() => {
       v: calcVelocityVal(players[id].velocity)
     })
   }
-}, 50/3)
+}, 1000/env.TICK)
 
 class Player {
-  constructor(id, held, r) {
+  constructor(id, held, r, spawned) {
     this.nick = ""
     this.id = id
     this.r = (r ? r : 14)
-    this.spawned = false
+    this.spawned = (spawned ? spawned : false)
+    this.lastCalcTime = Date.now()
     this.position = {
       x: 0,
       y: 0
