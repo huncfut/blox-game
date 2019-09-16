@@ -4,7 +4,7 @@ let held = {
   left: false,
   right: false
 }
-var player, stage, ws;
+var players = {}, stage, ws, selfId;
 
 var init = () => {
   stage = new createjs.Stage("demoCanvas")
@@ -16,13 +16,12 @@ var init = () => {
 }
 
 function onTick() {
-  if(player) {
-    sendHelds({
-      held
-    })
-  }
-  for(enemy in players) {
-    players[enemy].rotate()
+
+  for(id in players) {
+    if(id === selfId) {
+      sendHelds({ held })
+    }
+    // players[id].rotate()
   }
   stage.update()
 }
@@ -93,42 +92,41 @@ const handleKeyUp = e => {
   }
 }
 
-let players = {};
-
 const drawPlayer = (player, type, color) => {
-  player.shape.graphics[type](color).drawRect(player.position.x, player.position.y, player.size, player.size);
-  player.shape.regX = player.shape.regY = player.size / 2;
-  stage.addChild(player.shape);
+  player.shape.graphics[type](color).drawRect(player.position.x, player.position.y, player.size, player.size)
+  player.shape.regX = player.shape.regY = player.size / 2
+  stage.addChild(player.shape)
 }
 // Server connection
 const connect = () => {
+  // disable button
+  //
   ws.send(JSON.stringify({
     opcode: 'spawn',
     data: {
       nick: "xd"
     }
-  }));
+  }))
   ws.onmessage = event => {
-    console.log(event)
-    data = JSON.parse(event.data);
-    if (data.opcode == "spawned") {
-      console.log(data);
-      player = new Player(data.position);
-      drawPlayer(player, 'beginStroke', 'black');
-    }
-    if (data.opcode == "spawnedO") {
-      players[data.id] = new Player(data.position);
-      drawPlayer(players[data.id], 'beginFill', 'black');
-    }
-    if (data.opcode == "posO") {
-      players[data.id].update(data)
+
+    data = JSON.parse(event.data)
+    if(data.opcode == "spawned") {
+      console.log(data)
+      players[data.id] = new Player(data.position)
+      if(data.isMe) {
+        selfId = data.id
+        drawPlayer(players[selfId], 'beginStroke', 'black')
+      } else {
+        drawPlayer(players[data.id], 'beginFill', 'black')
+      }
     }
     if (data.opcode == "pos") {
-
-      player.update(data)
+      players[data.id].update(data)
     }
   }
 }
+
+const disconnect = () => ws.close()
 
 const sendHelds = data => {
   ws.send(JSON.stringify({

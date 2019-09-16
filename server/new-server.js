@@ -8,10 +8,10 @@ const server = new ws.Server({
 })
 
 // Server player manegment
-let players = []
+let players = {}
 let wsList = {}
 let uuid = 0
-const generateUUID = () => uuid++
+const generateUUID = () => `${uuid++}`
 
 // Acceleration
 
@@ -21,12 +21,11 @@ const generateUUID = () => uuid++
 
 const calcNewPlayer = id => {
   const player = players[id]
-  const newPlayer = new Player(id, player.held, player.r, player.spawned)
+  const newPlayer = new Player(id, player.nick, player.held, player.r)
   const dTime = (newPlayer.lastCalcTime - player.lastCalcTime) / 1000
-  console.log("dTime:", dTime)
-  newPlayer.acceleration = physics.calcAcceleration(newPlayer.held, player.velocity, dTime)
-  newPlayer.velocity = physics.calcVelocity(newPlayer.acceleration, player.velocity, dTime)
-  newPlayer.position = physics.calcPosition(newPlayer.acceleration, newPlayer.velocity, player.position, dTime)
+  newPlayer.position = physics.calcPosition(player.acceleration, player.velocity, player.position, dTime)
+  newPlayer.velocity = physics.calcVelocity(player.acceleration, player.velocity, dTime)
+  newPlayer.acceleration = physics.calcAcceleration(player.held, player.velocity, dTime)
   return newPlayer
 }
 
@@ -38,25 +37,19 @@ setInterval(() => {
   // if(wsList[0] !== undefined) {
   //   console.log(wsList[0].readyState)
   // }
-  let newPlayers = []
+  let newPlayers = {}
   for(let id in players) {
-    newPlayers.push(calcNewPlayer(id))
+    newPlayers[id] = calcNewPlayer(id)
   }
-
+  console.log(players)
   // for(let id in players) {
   //   // Collisions
   // }
   players = newPlayers
-  console.log(players)
+
   for(let id in players) {
-    if(!players[id].spawned) continue;
-    send(id, {
+    broadcast({
       opcode: "pos",
-      position: players[id].position,
-      v: calcVelocityVal(players[id].velocity)
-    })
-    broadcast(id, {
-      opcode: "posO",
       id: id,
       position: players[id].position,
       v: calcVelocityVal(players[id].velocity)
@@ -65,11 +58,10 @@ setInterval(() => {
 }, 1000/env.TICK)
 
 class Player {
-  constructor(id, held, r, spawned) {
-    this.nick = ""
+  constructor(id, nick, held, r) {
+    this.nick = (nick ? nick : "")
     this.id = id
     this.r = (r ? r : 14)
-    this.spawned = (spawned ? spawned : false)
     this.lastCalcTime = Date.now()
     this.position = {
       x: 0,
@@ -97,42 +89,45 @@ class Player {
 // WS functions
 // -----------------------------------
 const handlePacket = (uuid, packet) => {
-  const player = players[uuid]
   const { data } = packet
-  switch (packet.opcode) {
+  switch(packet.opcode) {
     case 'helds':
-      player.held = data.held
-
+      if(players[uuid]) {
+        players[uuid].held = data.held
+      } else {
+        console.log(`Player ${uuid} sends helds before spawning`)
+      }
+      break
     case 'spawn':
-      if(players[uuid].spawned == true) return
+      // Spawn player
+      if(players[uuid]) {
+        console.log(`Spawned player ${uuid} sends spawn request`)
+        return
+      }
+      players[uuid] = new Player(uuid, data.nick)
+      players[uuid].position = {
+        x: ~~(Math.random() * 256),
+        y: ~~(Math.random() * 256)
+      }
       // Send existing players
       for(let id in players) {
-        if(uuid != id && players[id].spawned) {
-          send(uuid, {
-            opcode: 'spawned0',
-            position: players[id].position,
-            nick: players[id].nick,
-            id: players[id].id
-          })
-        }
+        send(uuid, {
+          opcode: 'spawned',
+          position: players[id].position,
+          nick: players[id].nick,
+          id: players[id].id,
+          isMe: uuid == id
+        })
       }
-      // Spawn player
-      player.nick = data.nick
-      player.position.x = ~~(Math.random() * 512)
-      player.position.y = ~~(Math.random() * 512)
-      player.spawned = true
-      // Send position to player
-      send(uuid, {
-        opcode: 'spawned',
-        position: player.position
-      })
       // Send position to other players
-      broadcast(uuid, {
-        opcode: "posO",
-        position: player.position,
-        id: player.id,
-        v: player.v
-      })
+      broadcast({
+        opcode: "spawned",
+        position: players[uuid].position,
+        nick: players[uuid].nick,
+        id: players[uuid].id,
+        isMe: false
+      }, uuid)
+      break
   }
 }
 
@@ -144,10 +139,11 @@ const send = (uuid, data) => {
   return false
 }
 
-const broadcast = (uuid, data) => {
-  const player = players[uuid]
+const broadcast = (data, uuid) => {
   for(let id in players) {
-    if(id != uuid) {
+
+
+    if(uuid !== id) {
       send(id, data)
     }
   }
@@ -157,7 +153,6 @@ server.on('connection', ws => {
   ws.on('close', console.log)
   ws.on('error', console.log)
   let uuid = generateUUID()
-  players[uuid] = new Player(uuid)
   wsList[uuid] = ws
   ws.on('message', message => {
     message = message.toString()

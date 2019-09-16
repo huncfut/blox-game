@@ -8,7 +8,7 @@ const env = require('./env')
 //   y: -(env.ACCELERATION * velocity.y / env.MAX_SPEED)
 // })
 
-const drag = (velocity) => ({
+const drag = (velocity, acceleration) => ({
   x: -(env.ACCELERATION * velocity.x / env.MAX_SPEED),
   y: -(env.ACCELERATION * velocity.y / env.MAX_SPEED)
 })
@@ -36,19 +36,20 @@ const limitAcceleration = acceleration => ({
 })
 
 const cropVelocity = (acceleration, velocity) => ({
-  x: (Math.abs(velocity.x) < 50 && acceleration.x == 0) ? 0 : velocity.x,
-  y: (Math.abs(velocity.y) < 50 && acceleration.y == 0) ? 0 : velocity.y
+  x: (Math.abs(acceleration.x) < env.ACCELERATION/2 && Math.abs(velocity.x) < 50) ? 0 : velocity.x,
+  y: (Math.abs(acceleration.y) < env.ACCELERATION/2 && Math.abs(velocity.y) < 50) ? 0 : velocity.y
 })
 
 // od czasu
 
-const calcAccFromHeld = (held) => ({
+const calcAccFromHeld = (held) => limitAcceleration({
   x: (held.right ? (held.left ? 0 : env.ACCELERATION) : (held.left ? -env.ACCELERATION : 0)),
   y: (held.up ? (held.down ? 0 : env.ACCELERATION) : (held.down ? -env.ACCELERATION : 0))
 })
 
 const calcAcceleration = (held, velocity, dTime) => {
-  return addVec(calcAccFromHeld(held), drag(velocity))
+  const heldAcc = calcAccFromHeld(held)
+  return addVec(heldAcc, drag(velocity, heldAcc))
 }
 
 const calcVelocity = (acceleration, velocity, dTime) => (
