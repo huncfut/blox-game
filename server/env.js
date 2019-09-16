@@ -1,7 +1,7 @@
 module.exports = {
   MAX_SPEED: 1000,
   ACCELERATION: 5000,
-  TICK: 10,
+  TICK: 60,
   GAME_WIDTH: 3840,
   GAME_HEIGHT: 2160,
   PORT: 8082

@@ -106,8 +106,8 @@ const handlePacket = (uuid, packet) => {
       }
       players[uuid] = new Player(uuid, data.nick)
       players[uuid].position = {
-        x: ~~(Math.random() * 256),
-        y: ~~(Math.random() * 256)
+        x: ~~(Math.random() * 512),
+        y: ~~(Math.random() * 512)
       }
       // Send existing players
       for(let id in players) {

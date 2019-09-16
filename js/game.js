@@ -4,7 +4,7 @@ let held = {
   left: false,
   right: false
 }
-var players = {}, stage, ws, selfId;
+var players = {}, shapes = {}, stage, ws, selfId;
 
 var init = () => {
   stage = new createjs.Stage("demoCanvas")
@@ -92,10 +92,10 @@ const handleKeyUp = e => {
   }
 }
 
-const drawPlayer = (player, type, color) => {
-  player.shape.graphics[type](color).drawRect(player.position.x, player.position.y, player.size, player.size)
-  player.shape.regX = player.shape.regY = player.size / 2
-  stage.addChild(player.shape)
+const drawShape = (shape, type, color, size) => {
+  shape.graphics[type](color).drawRect(shape.x, shape.y, size, size)
+  shape.regX = shape.regY = size / 2
+  stage.addChild(shape)
 }
 // Server connection
 const connect = () => {
@@ -112,21 +112,39 @@ const connect = () => {
     data = JSON.parse(event.data)
     if(data.opcode == "spawned") {
       console.log(data)
+      shapes[data.id] = new createjs.Shape()
       players[data.id] = new Player(data.position)
       if(data.isMe) {
         selfId = data.id
-        drawPlayer(players[selfId], 'beginStroke', 'black')
+        drawShape(shapes[selfId], 'beginStroke', 'black', players[selfId].size)
       } else {
-        drawPlayer(players[data.id], 'beginFill', 'black')
+        drawShape(shapes[data.id], 'beginFill', 'black', players[data.id].size)
       }
     }
     if (data.opcode == "pos") {
-      players[data.id].update(data)
+      players[data.id].position = data.position
+      players[data.id].v = data.v
+
+      createjs.Tween.get(shapes[data.id], {loop: false})
+        .to({
+          x: data.position.x,
+          y: 512 - data.position.y
+        }, 1000 / TICK, createjs.Ease.Linear)
     }
   }
 }
 
 const disconnect = () => ws.close()
+
+// const destroy = (x, y) => {
+//   for(let i = 0; i < 30; i++) {
+//     makeParticle(
+//       x, y,
+//       utils.random(x-150, x+150),
+//       utils.random(y-150, y+150), 12)
+//   }
+//   this.graphics.clear();
+// }
 
 const sendHelds = data => {
   ws.send(JSON.stringify({
