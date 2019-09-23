@@ -15,21 +15,51 @@ const generateUUID = () => `${uuid++}`
 
 // Acceleration
 
-
+console.log(physics.doCollision({
+  velocity: {
+    x: 1,
+    y: 1
+  },
+  position: {
+    x: 0,
+    y: 0
+  }
+}, {
+  velocity: {
+    x: 0,
+    y: 0
+  },
+  position: {
+    x: 1,
+    y: 1
+  }
+}))
 
 // Create new Player
 
-const calcNewPlayer = id => {
+const calcPrePlayer = id => {
   const player = players[id]
-  const newPlayer = new Player(id, player.nick, player.held, player.r)
-  const dTime = (newPlayer.lastCalcTime - player.lastCalcTime) / 1000
-  newPlayer.position = physics.calcPosition(player.acceleration, player.velocity, player.position, dTime)
-  newPlayer.velocity = physics.calcVelocity(player.acceleration, player.velocity, dTime)
-  newPlayer.acceleration = physics.calcAcceleration(player.held, player.velocity, dTime)
-  return newPlayer
+  const now = Date.now()
+  const dTime = (now - player.lastCalcTime) / 1000
+  const prePlayer = new Player(id,
+    player.nick,
+    player.held,
+    now,
+    physics.calcPosition(player.acceleration, player.velocity, player.position, dTime),
+    physics.calcVelocity(player.acceleration, player.velocity, dTime),
+    physics.calcAcceleration(player.held, player.velocity, dTime),
+    player.r
+  )
+  return prePlayer
 }
 
-
+const calcNewPlayer = (id, velocity) => {
+  const player = players[id]
+  return new Player(id, player.nick, player.held, player.lastCalcTime, player.position,
+    velocity,
+    { x: 0, y: 0 },
+    player.r)
+}
 
 const calcVelocityVal = velocity => Math.sqrt(velocity.x**2 + velocity.y**2)
 
@@ -37,16 +67,43 @@ setInterval(() => {
   // if(wsList[0] !== undefined) {
   //   console.log(wsList[0].readyState)
   // }
-  let newPlayers = {}
+  let prePlayers = {}
   for(let id in players) {
-    newPlayers[id] = calcNewPlayer(id)
+    prePlayers[id] = calcPrePlayer(id)
   }
-  console.log(players)
-  // for(let id in players) {
-  //   // Collisions
-  // }
+  // Collisions
+  let newPlayers = {}
+  for(let id in prePlayers) {
+    let newVelocity = {
+      x: 0,
+      y: 0
+    }
+    // Between players
+    for(let enemyId in prePlayers) {
+      if(id !== enemyId) {
+        if(physics.checkCollision(prePlayers[id], prePlayers[enemyId])) {
+          newVelocity = physics.addVec(newVelocity, physics.doCollision(prePlayers[id], prePlayers[enemyId]))
+        }
+      }
+    }
+
+    if(JSON.stringify(newVelocity) !== JSON.stringify({ x: 0, y: 0 })) {
+      newPlayers[id] = calcNewPlayer(id, newVelocity)
+    } else {
+      newPlayers[id] = prePlayers[id]
+    }
+
+
+    // prePlayers[id].position.x = (prePlayers[id].position.x > 512) ? 512 : (prePlayers[id].position.x < 0) ? 0 : prePlayers[id].position.x
+    // prePlayers[id].position.y = (prePlayers[id].position.y > 512) ? 512 : (prePlayers[id].position.y < 0) ? 0 : prePlayers[id].position.y
+  }
+
   players = newPlayers
 
+
+}, 1000/env.TICK)
+
+setInterval(() => {
   for(let id in players) {
     broadcast({
       opcode: "pos",
@@ -55,32 +112,32 @@ setInterval(() => {
       v: calcVelocityVal(players[id].velocity)
     })
   }
-}, 1000/env.TICK)
+}, 1000/env.SEND_TICK)
 
 class Player {
-  constructor(id, nick, held, r) {
-    this.nick = (nick ? nick : "")
+  constructor(id, nick, held, time, position, velocity, acceleration, r) {
+    this.nick = nick || ""
     this.id = id
-    this.r = (r ? r : 14)
-    this.lastCalcTime = Date.now()
-    this.position = {
+    this.r = r || 14
+    this.lastCalcTime = time || Date.now()
+    this.position = position || {
       x: 0,
       y: 0
     }
-    this.velocity = {
+    this.velocity = velocity || {
       x: 0,
       y: 0
     }
-    this.acceleration = {
+    this.acceleration = acceleration || {
       x: 0,
       y: 0
     }
-    this.held = (held ? held : {
+    this.held = held || {
       up: false,
       down: false,
       right: false,
       left: false
-    })
+    }
   }
 }
 
@@ -107,7 +164,7 @@ const handlePacket = (uuid, packet) => {
       players[uuid] = new Player(uuid, data.nick)
       players[uuid].position = {
         x: ~~(Math.random() * 512),
-        y: ~~(Math.random() * 512)
+        y: 200
       }
       // Send existing players
       for(let id in players) {
@@ -131,18 +188,10 @@ const handlePacket = (uuid, packet) => {
   }
 }
 
-const send = (uuid, data) => {
-  if(wsList[uuid].readyState == 1) {
-    wsList[uuid].send(JSON.stringify(data))
-    return true
-  }
-  return false
-}
+const send = (uuid, data) => wsList[uuid].readyState === ws.OPEN && wsList[uuid].send(JSON.stringify(data))
 
 const broadcast = (data, uuid) => {
   for(let id in players) {
-
-
     if(uuid !== id) {
       send(id, data)
     }

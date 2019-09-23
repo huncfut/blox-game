@@ -130,6 +130,7 @@ const connect = () => {
           x: data.position.x,
           y: 512 - data.position.y
         }, 1000 / TICK, createjs.Ease.Linear)
+
     }
   }
 }
@@ -147,7 +148,7 @@ const disconnect = () => ws.close()
 // }
 
 const sendHelds = data => {
-  ws.send(JSON.stringify({
+  ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({
     opcode: 'helds',
     data
   }))

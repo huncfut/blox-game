@@ -23,10 +23,19 @@ const addVec = (v, u) => ({
   y: v.y + u.y
 })
 
+const subVec = (v, u) => ({
+  x: v.x - u.x,
+  y: v.y - u.y
+})
+
 const scalMultVec = (v, k) => ({
   x: v.x * k,
   y: v.y * k
 })
+
+const dotProduct = (v, u) => (v.x * u.x) + (v.y * u.y)
+
+
 
 const vecLen = v => Math.sqrt(v.x**2 + v.y**2)
 
@@ -64,11 +73,29 @@ const calcPosition = (acceleration, velocity, position, dTime) => {
 
 }
 
+
+// Collisions
+
+const checkCollision = (playerA, playerB) => {
+  return vecLen(subVec(playerA.position, playerB.position)) <= (playerA.r + playerB.r)
+}
+
+const doCollision = (playerA, playerB) => {
+  const licznik = dotProduct(subVec(playerA.velocity, playerB.velocity), subVec(playerA.position, playerB.position))
+  const mianownik = vecLen(subVec(playerA.position, playerB.position))**2
+  const v = roundVec(subVec(playerA.position, playerB.position))
+  console.log(mianownik)
+  return subVec(playerA.velocity, roundVec(scalMultVec(v, licznik / mianownik)))
+}
+
 module.exports = {
   addVec,
+  subVec,
+  vecLen,
   scalMultVec,
   calcAcceleration,
   calcVelocity,
   calcPosition,
-  vecLen
+  checkCollision,
+  doCollision
 }
