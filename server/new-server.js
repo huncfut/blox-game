@@ -1,4 +1,7 @@
 // Moving, Collisions (./physics.js)
+// wall collision
+//
+
 const physics = require('./physics')
 const ws = require('ws')
 const env = require('./env')
@@ -61,8 +64,6 @@ const calcNewPlayer = (id, velocity) => {
     player.r)
 }
 
-const calcVelocityVal = velocity => Math.sqrt(velocity.x**2 + velocity.y**2)
-
 setInterval(() => {
   // if(wsList[0] !== undefined) {
   //   console.log(wsList[0].readyState)
@@ -78,6 +79,7 @@ setInterval(() => {
       x: 0,
       y: 0
     }
+
     // Between players
     for(let enemyId in prePlayers) {
       if(id !== enemyId) {
@@ -87,15 +89,33 @@ setInterval(() => {
       }
     }
 
+    // With walls
+    if(prePlayers[id].position.x + prePlayers[id].r > env.GAME_WIDTH) {
+      newVelocity.x -= prePlayers[id].velocity.x * env.BOUNCE_COEFFICIENT
+      newVelocity.y = prePlayers[id].velocity.y
+      prePlayers[id].position.x = env.GAME_WIDTH
+    }
+    if(prePlayers[id].position.x - prePlayers[id].r < 0) {
+      newVelocity.x -= prePlayers[id].velocity.x * env.BOUNCE_COEFFICIENT/3
+      newVelocity.y = prePlayers[id].velocity.y
+      prePlayers[id].position.x = 0
+    }
+    if(prePlayers[id].position.y + prePlayers[id].r > env.GAME_HEIGHT) {
+      newVelocity.y -= prePlayers[id].velocity.y * env.BOUNCE_COEFFICIENT
+      newVelocity.x = prePlayers[id].velocity.x
+      prePlayers[id].position.y = env.GAME_HEIGHT
+    }
+    if(prePlayers[id].position.y - prePlayers[id].r < 0) {
+      newVelocity.y -= prePlayers[id].velocity.y * env.BOUNCE_COEFFICIENT
+      newVelocity.x = prePlayers[id].velocity.x
+      prePlayers[id].position.y = 0
+    }
+
     if(JSON.stringify(newVelocity) !== JSON.stringify({ x: 0, y: 0 })) {
       newPlayers[id] = calcNewPlayer(id, newVelocity)
     } else {
       newPlayers[id] = prePlayers[id]
     }
-
-
-    // prePlayers[id].position.x = (prePlayers[id].position.x > 512) ? 512 : (prePlayers[id].position.x < 0) ? 0 : prePlayers[id].position.x
-    // prePlayers[id].position.y = (prePlayers[id].position.y > 512) ? 512 : (prePlayers[id].position.y < 0) ? 0 : prePlayers[id].position.y
   }
 
   players = newPlayers
@@ -109,7 +129,7 @@ setInterval(() => {
       opcode: "pos",
       id: id,
       position: players[id].position,
-      v: calcVelocityVal(players[id].velocity)
+      v: physics.vecLen(players[id].velocity)
     })
   }
 }, 1000/env.SEND_TICK)
@@ -118,7 +138,7 @@ class Player {
   constructor(id, nick, held, time, position, velocity, acceleration, r) {
     this.nick = nick || ""
     this.id = id
-    this.r = r || 14
+    this.r = r || 16
     this.lastCalcTime = time || Date.now()
     this.position = position || {
       x: 0,

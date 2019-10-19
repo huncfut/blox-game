@@ -21,7 +21,7 @@ function onTick() {
     if(id === selfId) {
       sendHelds({ held })
     }
-    // players[id].rotate()
+    shapes[id].rotation = shapes[id].rotation + 2 + players[id].v/35 || 0
   }
   stage.update()
 }
