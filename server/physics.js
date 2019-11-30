@@ -45,8 +45,8 @@ const limitAcceleration = acceleration => ({
 })
 
 const cropVelocity = (acceleration, velocity) => ({
-  x: (Math.abs(acceleration.x) < env.ACCELERATION/2 && Math.abs(velocity.x) < 50) ? 0 : velocity.x,
-  y: (Math.abs(acceleration.y) < env.ACCELERATION/2 && Math.abs(velocity.y) < 50) ? 0 : velocity.y
+  x: ((Math.abs(acceleration.x) < env.ACCELERATION/2) && (Math.abs(velocity.x) < 50)) ? 0 : velocity.x,
+  y: ((Math.abs(acceleration.y) < env.ACCELERATION/2) && (Math.abs(velocity.y) < 50)) ? 0 : velocity.y
 })
 
 // od czasu
@@ -58,7 +58,8 @@ const calcAccFromHeld = (held) => limitAcceleration({
 
 const calcAcceleration = (held, velocity, dTime) => {
   const heldAcc = calcAccFromHeld(held)
-  return addVec(heldAcc, drag(velocity, heldAcc))
+  const acc = addVec(heldAcc, drag(velocity, heldAcc))
+  return acc
 }
 
 const calcVelocity = (acceleration, velocity, dTime) => (
@@ -68,7 +69,6 @@ const calcVelocity = (acceleration, velocity, dTime) => (
 const calcPosition = (acceleration, velocity, position, dTime) => {
   const distFromVel = addVec(scalMultVec(velocity, dTime), position)
   const distFromAcc = scalMultVec(scalMultVec(scalMultVec(acceleration, dTime), dTime), 0.5)
-
   return addVec(distFromVel, distFromAcc)
 
 }
@@ -84,7 +84,6 @@ const doCollision = (playerA, playerB) => {
   const licznik = dotProduct(subVec(playerA.velocity, playerB.velocity), subVec(playerA.position, playerB.position))
   const mianownik = vecLen(subVec(playerA.position, playerB.position))**2
   const v = roundVec(subVec(playerA.position, playerB.position))
-  console.log(mianownik)
   return subVec(playerA.velocity, roundVec(scalMultVec(v, licznik / mianownik)))
 }
 
