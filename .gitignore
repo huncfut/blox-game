@@ -2,6 +2,9 @@ node_modules
 bundle.js
 npm-debug.log
 .DS_Store
+Dockerfile
+build.sh
+deploy.sh
 
 # IntelliJ
 *.iml
