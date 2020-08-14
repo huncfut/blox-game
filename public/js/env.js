@@ -14,5 +14,10 @@ const KEYCODE_1 = 49
 
 const TICK = 60
 
+const ACCELERATION = 4000
+const MAX_SPEED = 1200
+
+const STUN_LENGTH = 500
+
 const IP = window.location.hostname
 const PORT = 8082

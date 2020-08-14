@@ -1,123 +1,173 @@
-let held = {
-  up: false,
-  down: false,
-  left: false,
-  right: false,
-  bullet: false,
-  laser: false
-}
-
-var players = {}, shapes = {}, stage, ws, selfId, fireHeld = false, bullets = []
-
-
-var init = () => {
-  const conButton = document.getElementById('connect')
-  const disButton = document.getElementById('disconnect')
-  conButton.onclick = connect
-  disButton.onclick = fireArrow
-  stage = new createjs.Stage("demoCanvas")
-  createjs.Ticker.framerate = TICK
-  createjs.Ticker.addEventListener("tick", onTick)
-  document.addEventListener('keyup', handleKeyUp)
-  document.addEventListener('keydown', handleKeyDown)
-}
-
-const fireArrow = player => {
-  makeParticle(100, 200, 150, 250, 100)
-}
-
-function onTick() {
-  if(ws) {
-    for(id in players) {
-      if(id === selfId) {
-        sendHelds({ held })
-      }
-      shapes[id].rotation = shapes[id].rotation + 2 + players[id].v/35 || 0
-    }
-    stage.update()
-  }
-}
-
-const makeParticle = (x, y, x1, y1, size) => {
-  var particle = new createjs.Shape()
-  particle.graphics.beginStroke("#696969").drawRoundRect(0, 0, size, size, 1)
-  particle.regX = size / 2
-  particle.regY = size / 2
-  particle.x = x
-  particle.y = x
-  stage.addChild(particle)
-  let time = utils.random(1000, 1500)
-  createjs.Tween.get(particle, {loop: true})
-    .to({
-      rotation: Math.random() > 0.5 ? 360 : -360
-    }, utils.random(500, 1000), createjs.Ease.linear)
-  createjs.Tween.get(particle, {loop: false})
-    .to({
-      x: x1,
-      y: y1
-    }, time, createjs.Ease.getPowOut(3))
-  createjs.Tween.get(particle, {loop: false})
-    .to({
-      alpha: 0
-    }, time + 500, createjs.Ease.getPowOut(1))
-}
-
-const handleKeyDown = e => {
-  switch (e.keyCode) {
-    case KEYCODE_W:
-    case KEYCODE_ARROW_UP:
-      held.up = true;
-      break
-    case KEYCODE_S:
-    case KEYCODE_ARROW_DOWN:
-      held.down = true;
-      break
-    case KEYCODE_A:
-    case KEYCODE_ARROW_LEFT:
-      held.left = true
-      break
-    case KEYCODE_D:
-    case KEYCODE_ARROW_RIGHT:
-      held.right = true
-      break;
-    case KEYCODE_2:
-    case KEYCODE_BRACKET_RIGHT:
-      held.bullet = true
-      break;
-  }
-}
-
-const handleKeyUp = e => {
-  switch (e.keyCode) {
-    case KEYCODE_W:
-    case KEYCODE_ARROW_UP:
-      held.up = false
-      break
-    case KEYCODE_S:
-    case KEYCODE_ARROW_DOWN:
-      held.down = false
-      break
-    case KEYCODE_A:
-    case KEYCODE_ARROW_LEFT:
-      held.left = false
-      break
-    case KEYCODE_D:
-    case KEYCODE_ARROW_RIGHT:
-      held.right = false
-      break
-    case KEYCODE_2:
-    case KEYCODE_BRACKET_RIGHT:
-      held.bullet = false
-      break;
-  }
-}
+var players = {}, newPlayers = {}, shapes = {}, stage, ws, myId, fireHeld = false, bullets = []
 
 const drawShape = (shape, type, color, size) => {
   shape.graphics[type](color).drawRect(shape.x, shape.y, size, size)
   shape.regX = shape.regY = size / 2
   stage.addChild(shape)
 }
-// Server connection
+
+const calcNewPlayer = player => {
+  const {
+    id, nick, lastCalcTime, position, velocity, acceleration, bulletCD, stun, r
+  } = player
+  const now = Date.now()
+  const dTime = (now - lastCalcTime) / 1000
+  return (id !== myId) && {
+    id,
+    nick,
+    lastCalcTime: now,
+    position: physics.calcPosition(acceleration, velocity, position, dTime),
+    velocity: physics.calcVelocity(acceleration, velocity, dTime),
+    acceleration,
+    bulletCD,
+    stun,
+    r,
+  } || {
+    id,
+    nick,
+    lastCalcTime: now,
+    position: physics.calcPosition(acceleration, velocity, position, dTime),
+    velocity: physics.calcVelocity(acceleration, velocity, dTime),
+    acceleration: physics.calcAcceleration(held, velocity, dTime, (stun > now)),
+    bulletCD,
+    stun,
+    r,
+  }
+}
+
+const checkCollisionsWithPlayers = players => {
+  var collisions = []
+  for(let id in players) {
+    for(let enemyId in players) {
+      (id !== enemyId)
+      && physics.checkCollision(players[id], players[enemyId])
+      && collisions.push([id, enemyId])
+    }
+  }
+  return collisions
+}
+
+const checkCollisionsWithWalls = players => (
+  Object.values(players)
+    .map(player => {
+      const { position: { x, y }, r } = player
+      var walls = []
+      y + r > 512 && walls.push('N')
+      x - r < 0 && walls.push('W')
+      y - r < 0 && walls.push('S')
+      x + r > 512 && walls.push('E')
+      return [player.id, walls]
+    })
+    .filter(t => t[1].length>0)
+)
+
+const getCollisionWithPlayers = collisionsWithPlayers => {
+  return new Set(collisionsWithPlayers.map(t => t[0]))
+}
+
+const getCollisionWithWalls = collisionsWithWalls => {
+  return new Set(collisionsWithWalls.map(t => t[0]))
+}
+
+const getNewPlayerAfterWallCollision = (player, newPlayers, collisions) => {
+  const {
+    id, nick, held, lastCalcTime, position, velocity, bulletCD, stun, r
+  } = player
+  const walls = collisions.filter(t => t[0] === id)[0][1]
+
+  const newVelocity = walls.reduce(
+    (v, wall) => {
+      const y = (wall === 'N' || wall === 'S') && -v.y*2/3 || v.y
+      const x = (wall === 'E' || wall === 'W') && -v.x*2/3 || v.x
+      return {
+        x,
+        y
+      }
+    },
+    velocity
+  )
+  return {
+    id,
+    nick,
+    held,
+    lastCalcTime,
+    position,
+    velocity: newVelocity,
+    acceleration: {x:0, y:0},
+    bulletCD,
+    stun: Date.now() + STUN_LENGTH,
+    r
+  }
+}
+
+const getNewPlayerAfterPlayerCollision = (player, newPlayers, collisions) => {
+  const {
+    id, nick, held, lastCalcTime, position, bulletCD, stun, r
+  } = player
+  const velocity = collisions.filter(t => t[0] === id)
+    .map(t => physics.doCollision(newPlayers[t[0]], newPlayers[t[1]]))
+    .reduce(physics.addVec)
+
+  return {
+    id,
+    nick,
+    held,
+    lastCalcTime,
+    position,
+    velocity,
+    acceleration: {x:0, y:0},
+    bulletCD,
+    stun: Date.now() + STUN_LENGTH,
+    r
+  }
+}
+
+const onTick = () => {
+  if(ws) {
+    players[myId] && sendHelds({ held })
+
+    const newPlayers = R.mapObjIndexed(
+      player => calcNewPlayer(player),
+      players
+    )
+
+    const collisionsWithPlayers = checkCollisionsWithPlayers(newPlayers)
+    const collisionsWithWalls = checkCollisionsWithWalls(newPlayers)
+    const inCollisionWithPlayers = getCollisionWithPlayers(collisionsWithPlayers)
+    const inCollisionWithWalls = getCollisionWithWalls(collisionsWithWalls)
+
+    players = R.mapObjIndexed(
+      (player, id) => inCollisionWithPlayers.has(id)
+        && getNewPlayerAfterPlayerCollision(players[id], newPlayers, collisionsWithPlayers)
+        || player,
+      R.mapObjIndexed(
+        (player, id) => inCollisionWithWalls.has(player.id)
+          && getNewPlayerAfterWallCollision(players[player.id], newPlayers, collisionsWithWalls)
+          || player,
+        newPlayers
+      )
+    )
+
+    // Update shapes
+    for(id in shapes) {
+      const vecDist = physics.subVec(players[id].position, {x: shapes[id].x, y: shapes[id].y})
+      shapes[id].rotation = shapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
+      //If distance between shape and actual position is 2 times greater than actual velocity
+      //and greater than maximum speed
+      if((physics.scalMultVec(vecDist, .5) > players[id].velocity) && (physics.vecLen(vecDist) > 0)) {
+        createjs.Tween.get(shapes[data.id], {loop: false})
+        .to({
+          x: player[id].position.x,
+          y: 512 - player[id].position.y
+        }, 1000 / (TICK/3), createjs.Ease.Linear)
+      } else {
+        shapes[id].x = players[id].position.x
+        shapes[id].y = players[id].position.y
+      }
+    }
+  }
+  stage.update()
+}
 
 const connect = () => {
   if(ws) return
@@ -136,44 +186,28 @@ const connect = () => {
       if(data.opcode === "spawned") {
         console.log(data)
         shapes[data.id] = new createjs.Shape()
-        players[data.id] = new Player(data.position)
+        players[data.id] = newPlayer(data.id, data.nick, Date.now(), data.position)
         if(data.isMe) {
-          selfId = data.id
-          drawShape(shapes[selfId], 'beginStroke', 'black', players[selfId].size)
+          myId = data.id
+          drawShape(shapes[myId], 'beginStroke', 'black', 28)
         } else {
-          drawShape(shapes[data.id], 'beginFill', 'black', players[data.id].size)
+          drawShape(shapes[data.id], 'beginFill', 'black', 28)
         }
       }
-      if (data.opcode === "pos") {
+      if (data.opcode === "player") {
         players[data.id].position = data.position
-        players[data.id].v = data.v
-
-        createjs.Tween.get(shapes[data.id], {loop: false})
-          .to({
-            x: data.position.x,
-            y: 512 - data.position.y
-          }, 1000 / TICK, createjs.Ease.Linear)
+        players[data.id].velocity = data.velocity
+        players[data.id].acceleration = data.acceleration
       }
-      if(data.opcode === "bullets") {
-        bullets = data.bullets
-        console.log(bullets)
+      if(data.opcode === "newBullets") {
+        bullets.push(...data.newBullets)
+      }
+      if(data.opcode === "newBullets") {
+        bullets.filter(bullet => bullet)
       }
     }
   }
 }
-
-const disconnect = () => ws.close()
-
-
-// const destroy = (x, y) => {
-//   for(let i = 0; i < 30; i++) {
-//     makeParticle(
-//       x, y,
-//       utils.random(x-150, x+150),
-//       utils.random(y-150, y+150), 12)
-//   }
-//   this.graphics.clear();
-// }
 
 const sendHelds = data => {
   ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({
@@ -181,3 +215,5 @@ const sendHelds = data => {
     data
   }))
 }
+
+const disconnect = () => ws.close()

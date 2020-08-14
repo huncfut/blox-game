@@ -1,6 +1,5 @@
 // Moving, Collisions (./physics.js)
 // wall collision
-//
 const express = require('express')
 const app = express()
 const physics = require('./physics')
@@ -14,8 +13,8 @@ const combatUtils = require('./combatUtils')
 app.use('/', express.static('public'))
 app.listen(env.HTTP_PORT, () => console.log(`HTTP Server started on port ${env.HTTP_PORT}`))
 
-// WS Serverc
-const server = new ws.Server({
+// WS Server
+const wss = new ws.Server({
   port: env.PORT
 })
 
@@ -30,36 +29,35 @@ const generateUUID = () => `${uuid++}`
 
 const calcNewPlayer = player => {
   const {
-    id, nick, lastCalcTime, held, position, velocity, acceleration, bulletCD, isStunned, r
+    id, nick, lastCalcTime, held, position, velocity, acceleration, bulletCD, stun, r
   } = player
   const now = Date.now()
   const dTime = (now - lastCalcTime) / 1000
-  const newPlayer = {
+  return {
     id,
     nick,
     held,
     lastCalcTime: now,
     position: physics.calcPosition(acceleration, velocity, position, dTime),
     velocity: physics.calcVelocity(acceleration, velocity, dTime),
-    acceleration: physics.calcAcceleration(held, velocity, dTime),
+    acceleration: physics.calcAcceleration(held, velocity, dTime, (stun > now)),
     bulletCD,
-    isStunned,
+    stun,
     r,
   }
-  return newPlayer;
 }
 
-const getCollisionWithPlayers = players => {
-  return new Set(collisionUtils.checkCollisionsWithPlayers(players).map(t => t[0]))
+const getCollisionWithPlayers = collisionsWithPlayers => {
+  return new Set(collisionsWithPlayers.map(t => t[0]))
 }
 
-const getCollisionWithWalls = players => {
-  return new Set(collisionUtils.checkCollisionsWithWalls(players).map(t => t[0]))
+const getCollisionWithWalls = collisionsWithWalls => {
+  return new Set(collisionsWithWalls.map(t => t[0]))
 }
 
 const getNewPlayerAfterWallCollision = (player, newPlayers, collisions) => {
   const {
-    id, nick, held, lastCalcTime, position, velocity, bulletCD, isStunned, r
+    id, nick, held, lastCalcTime, position, velocity, bulletCD, r
   } = player
   const walls = collisions.filter(t => t[0] === id)[0][1]
 
@@ -83,7 +81,7 @@ const getNewPlayerAfterWallCollision = (player, newPlayers, collisions) => {
     velocity: newVelocity,
     acceleration: {x:0, y:0},
     bulletCD,
-    isStunned,
+    stun: Date.now() + env.STUN_LENGTH,
     r
   }
 }
@@ -94,7 +92,7 @@ const checkId = players => Object.keys(players)
 
 const getNewPlayerAfterPlayerCollision = (player, newPlayers, collisions) => {
   const {
-    id, nick, held, lastCalcTime, position, bulletCD, isStunned, r
+    id, nick, held, lastCalcTime, position, bulletCD, stun, r
   } = player
   const velocity = collisions.filter(t => t[0] === id)
     .map(t => physics.doCollision(newPlayers[t[0]], newPlayers[t[1]]))
@@ -109,25 +107,25 @@ const getNewPlayerAfterPlayerCollision = (player, newPlayers, collisions) => {
     velocity,
     acceleration: {x:0, y:0},
     bulletCD,
-    isStunned,
+    stun: Date.now() + env.STUN_LENGTH,
     r
   }
 }
 
 const getNewPlayerAfterShot = player => {
   const {
-    id, nick, held, lastCalcTime, position, velocity, acceleration, isStunned, r
+    id, nick, held, lastCalcTime, position, velocity, acceleration, stun, r
   } = player
   return {
     id, nick, held, lastCalcTime, position, velocity, acceleration,
     bulletCD: Date.now() + env.BULLETCD,
-    isStunned, r
+    stun, r
   }
 }
 
 
 setInterval(() => {
-  checkId(players) || console.log("Wrong id in players", players) && error.error.adfsdsfas.asads
+  checkId(players) || console.log("Wrong id in players: ", players) && error.error.adfsdsfas.asads
 
   const newPlayers = R.mapObjIndexed(
     player => calcNewPlayer(player),
@@ -139,8 +137,8 @@ setInterval(() => {
   // Collisions
   const collisionsWithPlayers = collisionUtils.checkCollisionsWithPlayers(newPlayers)
   const collisionsWithWalls = collisionUtils.checkCollisionsWithWalls(newPlayers)
-  const inCollisionWithPlayers = getCollisionWithPlayers(newPlayers)
-  const inCollisionWithWalls = getCollisionWithWalls(newPlayers)
+  const inCollisionWithPlayers = getCollisionWithPlayers(collisionsWithPlayers)
+  const inCollisionWithWalls = getCollisionWithWalls(collisionsWithWalls)
 
 
 
@@ -159,22 +157,37 @@ setInterval(() => {
 
 
   // Combat
+  let newBullets = []
+
   players = R.mapObjIndexed((player, id) => {
     return player.held.bullet
     && (player.bulletCD < Date.now())
-    && bullets.push(combatUtils.createBullet(players, id))
+    && newBullets.push(combatUtils.createBullet(players, id))
     && getNewPlayerAfterShot(player)
     || player
   }, players)
 
-  // console.log("________________")
-  // console.log(bullets)
-  // console.log("----")
-  // console.log(players)
-  // console.log("________________")
+  sendAll({ opcode: "newBullets", newBullets })
+
+  bullets.push(...newBullets)
+
+  console.log("________________")
+  console.log(bullets)
+  console.log("----")
+  console.log(players)
+  console.log("________________")
 
   const collisionsWithBullets = collisionUtils.checkCollisionsWithBullets(players, bullets)
-  const bulletsToRemove = new Set(collisionsWithBullets.map(t => t[0]))
+  console.log(collisionsWithBullets)
+  const bulletsToRemove = new Set(collisionsWithBullets.map(t => (
+    t[1] !== []
+      && t[0]
+      || {}
+  )))
+
+  sendAll({ opcode: "bulletsToRemove", bulletsToRemove })
+
+  console.log(bulletsToRemove)
   const playersToStun = new Set(collisionsWithBullets.map(t => t[1])
     .reduce((prev, curr) => prev.concat(curr), []))
 
@@ -190,10 +203,11 @@ setInterval(() => {
 setInterval(() => {
   R.mapObjIndexed((player, id) => {
     broadcast({
-      opcode: "pos",
+      opcode: "player",
       id: id,
       position: player.position,
-      v: physics.vecLen(player.velocity)
+      velocity: player.velocity,
+      acceleration: player.acceleration
     })
     send(id, {
       opcode: "bullets",
@@ -222,7 +236,7 @@ const newPlayer = (id, nick, held, time, position, velocity, acceleration, r) =>
     y: 0
   },
   bulletCD: 0,
-  isStunned: false,
+  stun: 0,
   held: held || {
     up: false,
     down: false,
@@ -253,8 +267,8 @@ const handlePacket = (uuid, packet) => {
       }
       players[uuid] = newPlayer(uuid, data.nick)
       players[uuid].position = {
-        x: ~~(Math.random() * 512),
-        y: ~~(Math.random() * 512)
+        x: ~~(Math.random() * 496) + 8,
+        y: ~~(Math.random() * 496) + 8
       }
 
       // Send existing players
@@ -282,9 +296,9 @@ const send = (uuid, data) => wsList[uuid].readyState === ws.OPEN && wsList[uuid]
 
 const broadcast = (data, uuid) => R.mapObjIndexed((player, id) => uuid !== id && send(id, data), players)
 
+const sendAll = (data) => R.mapObjIndexed((player, id) => send(id, data), players)
 
-// USUWANIE WS
-server.on('connection', ws => {
+wss.on('connection', ws => {
   ws.on('close', console.log)
   ws.on('error', console.log)
   let uuid = generateUUID()

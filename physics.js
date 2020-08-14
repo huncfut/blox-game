@@ -58,11 +58,11 @@ const cropVelocity = (acceleration, velocity) => ({
 
 const calcAccFromHeld = (held) => limitAcceleration({
   x: (held.right ? (held.left ? 0 : env.ACCELERATION) : (held.left ? -env.ACCELERATION : 0)),
-  y: (held.up ? (held.down ? 0 : env.ACCELERATION) : (held.down ? -env.ACCELERATION : 0))
+  y: (held.up ? (held.down ? 0 : -env.ACCELERATION) : (held.down ? env.ACCELERATION : 0))
 })
 
-const calcAcceleration = (held, velocity, dTime) => {
-  const heldAcc = calcAccFromHeld(held)
+const calcAcceleration = (held, velocity, dTime, isStunned) => {
+  const heldAcc = isStunned && {x: 0, y: 0} || calcAccFromHeld(held)
   const acc = addVec(heldAcc, drag(velocity, heldAcc))
   return acc
 }
