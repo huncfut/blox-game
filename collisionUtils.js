@@ -2,14 +2,15 @@ const physics = require('./physics')
 const R = require('ramda')
 const env = require('./env')
 
-const checkCollisionsWithBullets = (players, bullets) => {
-  return bullets.map(bullet => ([
+const checkCollisionsWithBullets = (players, bullets) => (
+  bullets.map(bullet => ([
     bullet,
-    Object.values(players).map(player => physics.checkCollision(player, bullet)
-      && player.id
-    )
-  ]))
-}
+    Object.values(players)
+      .filter(player => physics.checkCollision(player, bullet))
+      .map(player => player.id)
+    ]))
+    .filter(t => t[1] !== [])
+)
 
 const checkCollisionsWithPlayers = players => {
   var collisions = []

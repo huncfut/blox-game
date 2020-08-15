@@ -1,15 +1,13 @@
 {
   "name": "blox-game",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "",
   "main": "server.js",
   "dependencies": {
     "eslint": "^6.8.0",
     "express": "^4.17.1",
-    "https": "^1.0.0",
     "ramda": "^0.26.1",
     "ws": "^6.2.1",
-    "wss": "^3.3.4"
   },
   "devDependencies": {},
   "scripts": {

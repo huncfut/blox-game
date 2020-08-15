@@ -86,9 +86,7 @@ const getNewPlayerAfterWallCollision = (player, newPlayers, collisions) => {
   }
 }
 
-const checkId = players => Object.keys(players)
-  .map(id => id === players[id].id)
-  .reduce((a, b) => (a && b), true)
+const checkId = object => Object.keys(object).every(id => id === object[id].id)
 
 const getNewPlayerAfterPlayerCollision = (player, newPlayers, collisions) => {
   const {
@@ -157,9 +155,15 @@ setInterval(() => {
 
 
   // Combat
-  let newBullets = []
+  const newBullets = Object.keys(players).map(id => (
+    player.held.bullet
+    && (players[id].buletCD < Date.now())
+    && combatUtils.createBullet(players, id)
+  ))
 
-  players = R.mapObjIndexed((player, id) => {
+
+
+  R.mapObjIndexed((player, id) => {
     return player.held.bullet
     && (player.bulletCD < Date.now())
     && newBullets.push(combatUtils.createBullet(players, id))
@@ -171,14 +175,8 @@ setInterval(() => {
 
   bullets.push(...newBullets)
 
-  console.log("________________")
-  console.log(bullets)
-  console.log("----")
-  console.log(players)
-  console.log("________________")
 
   const collisionsWithBullets = collisionUtils.checkCollisionsWithBullets(players, bullets)
-  console.log(collisionsWithBullets)
   const bulletsToRemove = new Set(collisionsWithBullets.map(t => (
     t[1] !== []
       && t[0]
@@ -187,7 +185,6 @@ setInterval(() => {
 
   sendAll({ opcode: "bulletsToRemove", bulletsToRemove })
 
-  console.log(bulletsToRemove)
   const playersToStun = new Set(collisionsWithBullets.map(t => t[1])
     .reduce((prev, curr) => prev.concat(curr), []))
 
@@ -195,6 +192,13 @@ setInterval(() => {
   //   (player, id) => playersToStun.has(id)
   //     // && player.stun // DO STUUN
   // )
+  console.log("________________")
+  console.log(bullets)
+  console.log("----")
+  // console.log(players)
+  console.log(collisionsWithBullets)
+  // console.log(bulletsToRemove)
+  console.log("________________")
 
 
 
