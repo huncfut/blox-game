@@ -21,7 +21,7 @@ const wss = new ws.Server({
 // Server player manegment
 let players = {}
 let wsList = {}
-let bullets = []
+let bullets = {}
 let uuid = 0
 const generateUUID = () => `${uuid++}`
 
@@ -55,7 +55,7 @@ const getCollisionWithWalls = collisionsWithWalls => {
   return new Set(collisionsWithWalls.map(t => t[0]))
 }
 
-const getNewPlayerAfterWallCollision = (player, newPlayers, collisions) => {
+const getNewPlayerAfterWallCollision = (player, predPlayers, collisions) => {
   const {
     id, nick, held, lastCalcTime, position, velocity, bulletCD, r
   } = player
@@ -88,12 +88,12 @@ const getNewPlayerAfterWallCollision = (player, newPlayers, collisions) => {
 
 const checkId = object => Object.keys(object).every(id => id === object[id].id)
 
-const getNewPlayerAfterPlayerCollision = (player, newPlayers, collisions) => {
+const getNewPlayerAfterPlayerCollision = (player, predPlayers, collisions) => {
   const {
     id, nick, held, lastCalcTime, position, bulletCD, stun, r
   } = player
   const velocity = collisions.filter(t => t[0] === id)
-    .map(t => physics.doCollision(newPlayers[t[0]], newPlayers[t[1]]))
+    .map(t => physics.doCollision(predPlayers[t[0]], predPlayers[t[1]]))
     .reduce(physics.addVec)
 
   return {
@@ -125,82 +125,50 @@ const getNewPlayerAfterShot = player => {
 setInterval(() => {
   checkId(players) || console.log("Wrong id in players: ", players) && error.error.adfsdsfas.asads
 
-  const newPlayers = R.mapObjIndexed(
+  const predPlayers = R.mapObjIndexed(
     player => calcNewPlayer(player),
     players
   )
 
-  checkId(newPlayers) || console.log("Wrong id in newPlayers", newPlayers) && error.error.eradasdsadsdsa.asd
+  checkId(predPlayers) || console.log("Wrong id in predPlayers", predPlayers) && error.error.eradasdsadsdsa.asd
 
   // Collisions
-  const collisionsWithPlayers = collisionUtils.checkCollisionsWithPlayers(newPlayers)
-  const collisionsWithWalls = collisionUtils.checkCollisionsWithWalls(newPlayers)
+  const collisionsWithPlayers = collisionUtils.checkCollisionsWithPlayers(predPlayers)
+  const collisionsWithWalls = collisionUtils.checkCollisionsWithWalls(predPlayers)
   const inCollisionWithPlayers = getCollisionWithPlayers(collisionsWithPlayers)
   const inCollisionWithWalls = getCollisionWithWalls(collisionsWithWalls)
 
 
 
-  players = R.mapObjIndexed(
+  const movedPlayers = R.mapObjIndexed(
     (player, id) => inCollisionWithPlayers.has(id)
-      && getNewPlayerAfterPlayerCollision(players[id], newPlayers, collisionsWithPlayers)
+      && getNewPlayerAfterPlayerCollision(players[id], predPlayers, collisionsWithPlayers)
       || player,
     R.mapObjIndexed(
       (player, id) => inCollisionWithWalls.has(player.id)
-        && getNewPlayerAfterWallCollision(players[player.id], newPlayers, collisionsWithWalls)
+        && getNewPlayerAfterWallCollision(players[player.id], predPlayers, collisionsWithWalls)
         || player,
-      newPlayers
+      predPlayers
     )
   )
 
 
 
   // Combat
-  const newBullets = Object.keys(players).map(id => (
-    player.held.bullet
-    && (players[id].buletCD < Date.now())
-    && combatUtils.createBullet(players, id)
-  ))
+  // Move bullets
 
+  // Add new bullets
+  const newBullets = Object.keys(movedPlayers)
+    .filter(id => (
+      movedPlayers[id].held.bullet
+      && combatUtils.createBullet(movedPlayers, id)
+    ))
 
+  // Check collision with bullets
 
-  R.mapObjIndexed((player, id) => {
-    return player.held.bullet
-    && (player.bulletCD < Date.now())
-    && newBullets.push(combatUtils.createBullet(players, id))
-    && getNewPlayerAfterShot(player)
-    || player
-  }, players)
+  // Remove bullets
 
-  sendAll({ opcode: "newBullets", newBullets })
-
-  bullets.push(...newBullets)
-
-
-  const collisionsWithBullets = collisionUtils.checkCollisionsWithBullets(players, bullets)
-  const bulletsToRemove = new Set(collisionsWithBullets.map(t => (
-    t[1] !== []
-      && t[0]
-      || {}
-  )))
-
-  sendAll({ opcode: "bulletsToRemove", bulletsToRemove })
-
-  const playersToStun = new Set(collisionsWithBullets.map(t => t[1])
-    .reduce((prev, curr) => prev.concat(curr), []))
-
-  // players = R.mapObjIndexed(
-  //   (player, id) => playersToStun.has(id)
-  //     // && player.stun // DO STUUN
-  // )
-  console.log("________________")
-  console.log(bullets)
-  console.log("----")
-  // console.log(players)
-  console.log(collisionsWithBullets)
-  // console.log(bulletsToRemove)
-  console.log("________________")
-
-
+  // Override bullets for next tick
 
 }, 1000/env.TICK)
 
