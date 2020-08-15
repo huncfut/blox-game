@@ -1,29 +1,25 @@
 const physics = require('./physics')
 const R = require('ramda')
 const env = require('./env')
+var id = 0
 
-const createBullet = (players, id) => {
+const getId = () => `${id++}`
+
+const createBullet = (players, playerId) => {
   let target = Object.values(players)
-    .filter(player => player.id !== id)
-    .map(player => ({id: player.id, d: physics.vecLen(physics.subVec(players[id].position, player.position))}))
+    .filter(player => player.id !== playerId)
+    .map(player => ({id: player.id, d: physics.vecLen(physics.subVec(players[playerId].position, player.position))}))
     .reduce((prev, curr) => prev.d > curr.d && curr || prev)
   return {
-    playerId: id,
+    id: getId(),
+    playerId: playerId,
     position: physics.addVec(
       players[id].position,
       physics.scalMultVec(
-        physics.subVec(players[target.id].position, players[id].position.x),
+        physics.subVec(players[target.id].position, players[playerId].position.x),
         (players[id].r + 5)/target.d
     )),
-    // position: physics.addVec(players[id].position, physics.radialToEuc({
-    //   len: players[id].r + 5,
-    //   angle: physics.angleOfVec(physics.subVec(players[id].position, players[targetId].position)),
-    // })),
-    // velocity: physics.radialToEuc({
-    //   len: 1000,
-    //   angle: physics.angleOfVec(physics.subVec(players[id].position, players[targetId].position)),
-    // }),
-    velocity: physics.scalMultVec(physics.subVec(players[target.id].position, players[id].position), bulletSpeed/target.d),
+    velocity: physics.scalMultVec(physics.subVec(players[target.id].position, players[playerId].position), bulletSpeed/target.d),
     r: 4
   }
 }
