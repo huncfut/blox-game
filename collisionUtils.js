@@ -4,12 +4,11 @@ const env = require('./env')
 
 const checkCollisionsWithBullets = (players, bullets) => (
   bullets.map(bullet => ([
-    bullet,
-    Object.values(players)
-      .filter(player => physics.checkCollision(player, bullet))
-      .map(player => player.id)
+		Object.values(players)
+      .filter(player => physics.checkCollision(player, bullet) && player.id),
+		bullet
     ]))
-    .filter(t => t[1] !== [])
+    .filter(t => t[0] !== [])
 )
 
 const checkCollisionsWithPlayers = players => {
