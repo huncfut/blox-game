@@ -164,6 +164,9 @@ setInterval(() => {
       && combatUtils.createBullet(movedPlayers, id)
     ))
 
+  // Change players that fired a bullet
+  // const playersThatFiredABullet = new Set(newBullets.map(bullet => bullet.playerId))
+
   // Check collision with bullets
 
   // Remove bullets

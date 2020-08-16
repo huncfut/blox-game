@@ -1,9 +1,6 @@
 const physics = require('./physics')
 const R = require('ramda')
 const env = require('./env')
-var id = 0
-
-const getId = () => `${id++}`
 
 const createBullet = (players, playerId) => {
   let target = Object.values(players)
@@ -11,7 +8,6 @@ const createBullet = (players, playerId) => {
     .map(player => ({id: player.id, d: physics.vecLen(physics.subVec(players[playerId].position, player.position))}))
     .reduce((prev, curr) => prev.d > curr.d && curr || prev)
   return {
-    id: getId(),
     playerId: playerId,
     position: physics.addVec(
       players[id].position,
