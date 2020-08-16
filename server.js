@@ -177,8 +177,8 @@ setInterval(() => {
         || player
 			), R.mapObjIndexed(
 				(player, id) => (inCollisionWithBullets.has(player.id)
-					&& getNewPlayerAfterBulletCollision(player, )
-
+					&& getNewPlayerAfterBulletCollision(player, allBullets, collisionsWithBullets)
+					|| player
 				), predPlayers)))
 
 	// Override bullets for next tick
