@@ -156,17 +156,17 @@ setInterval(() => {
 
   // Combat
   // Move bullets
-	const movedBullets = bullets.map(bullet => moveBullet(bullet))
+	const predBullets = bullets.map(bullet => moveBullet(bullet))
 
   // Create new bullets
   const newBullets = Object.keys(predPlayers)
     .filter(id => (
-      movedPlayers[id].held.bullet
+      predPlayers[id].held.bullet
       && combatUtils.createBullet(predPlayers, id)
     ))
 
   // Merge bullets
-  const allBullets = [...movedBullets, ...newBullets]
+  const allBullets = [...predBullets, ...newBullets]
 
   // Stun players shot
 
@@ -181,9 +181,9 @@ setInterval(() => {
 	const inCollisionWithBullets = new Set(collisionsWithBullets.flatMap(t => t[0]))
 	const inCollisionWithPlayers = new Set(collisionsWithPlayers.map(t => t[0]))
 	const inCollisionWithWalls = new Set(collisionsWithWalls.map(t => t[0]))
-
-	// Get shooters
 	const playersThatFiredABullet = new Set(newBullets.map(bullet => bullet.playerId))
+
+	// Get bullets in Collision set
 	const bulletsInCollision = new Set(collisionsWithBullets.map(t => t[1]))
 
 	// Update players
@@ -209,10 +209,8 @@ setInterval(() => {
 						|| player
 					), predPlayers))))
 
-	// Update bullets
+	// Update and override bullets for next tick
 	bullets = allBullets.filter(bullet => !bulletsInCollision.has(bullet))
-
-	// Override bullets for next tick
 
 }, 1000/env.TICK)
 
@@ -229,9 +227,7 @@ setInterval(() => {
       opcode: "bullets",
       bullets
     })
-  }, players
-  )
-
+  }, players)
 }, 1000/env.SEND_TICK)
 
 const newPlayer = (id, nick, held, time, position, velocity, acceleration, r) => ({

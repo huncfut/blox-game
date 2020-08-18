@@ -122,49 +122,63 @@ const getNewPlayerAfterPlayerCollision = (player, newPlayers, collisions) => {
   }
 }
 
+const clientSidePrediction = () => {
+	console.log("siema")
+	const newPlayers = R.mapObjIndexed(
+		player => calcNewPlayer(player),
+		players
+	)
+
+	const collisionsWithPlayers = checkCollisionsWithPlayers(newPlayers)
+	const collisionsWithWalls = checkCollisionsWithWalls(newPlayers)
+	const inCollisionWithPlayers = getCollisionWithPlayers(collisionsWithPlayers)
+	const inCollisionWithWalls = getCollisionWithWalls(collisionsWithWalls)
+
+	players = R.mapObjIndexed(
+		(player, id) => inCollisionWithPlayers.has(id)
+			&& getNewPlayerAfterPlayerCollision(players[id], newPlayers, collisionsWithPlayers)
+			|| player,
+		R.mapObjIndexed(
+			(player, id) => inCollisionWithWalls.has(player.id)
+				&& getNewPlayerAfterWallCollision(players[player.id], newPlayers, collisionsWithWalls)
+				|| player,
+			newPlayers
+		)
+	)
+
+	// Update shapes
+	for(id in shapes) {
+		const vecDist = physics.subVec(players[id].position, {x: shapes[id].x, y: shapes[id].y})
+		shapes[id].rotation = shapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
+		//If distance between shape and actual position is 2 times greater than actual velocity
+		//and greater than maximum speed
+		if((physics.scalMultVec(vecDist, .5) > players[id].velocity) && (physics.vecLen(vecDist) > 0)) {
+			createjs.Tween.get(shapes[data.id], {loop: false})
+			.to({
+				x: player[id].position.x,
+				y: 512 - player[id].position.y
+			}, 1000 / (TICK/3), createjs.Ease.Linear)
+		} else {
+			shapes[id].x = players[id].position.x
+			shapes[id].y = players[id].position.y
+		}
+	}
+}
+
+const directServerDisplaying = () => {
+	console.log("ELo")
+	for(id in shapes) {
+		shapes[id].rotation = shapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
+		shapes[id].x = players[id].position.x
+		shapes[id].y = players[id].position.y
+	}
+}
+
 const onTick = () => {
   if(ws) {
     players[myId] && sendHelds({ held })
-
-    const newPlayers = R.mapObjIndexed(
-      player => calcNewPlayer(player),
-      players
-    )
-
-    const collisionsWithPlayers = checkCollisionsWithPlayers(newPlayers)
-    const collisionsWithWalls = checkCollisionsWithWalls(newPlayers)
-    const inCollisionWithPlayers = getCollisionWithPlayers(collisionsWithPlayers)
-    const inCollisionWithWalls = getCollisionWithWalls(collisionsWithWalls)
-
-    players = R.mapObjIndexed(
-      (player, id) => inCollisionWithPlayers.has(id)
-        && getNewPlayerAfterPlayerCollision(players[id], newPlayers, collisionsWithPlayers)
-        || player,
-      R.mapObjIndexed(
-        (player, id) => inCollisionWithWalls.has(player.id)
-          && getNewPlayerAfterWallCollision(players[player.id], newPlayers, collisionsWithWalls)
-          || player,
-        newPlayers
-      )
-    )
-
-    // Update shapes
-    for(id in shapes) {
-      const vecDist = physics.subVec(players[id].position, {x: shapes[id].x, y: shapes[id].y})
-      shapes[id].rotation = shapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
-      //If distance between shape and actual position is 2 times greater than actual velocity
-      //and greater than maximum speed
-      if((physics.scalMultVec(vecDist, .5) > players[id].velocity) && (physics.vecLen(vecDist) > 0)) {
-        createjs.Tween.get(shapes[data.id], {loop: false})
-        .to({
-          x: player[id].position.x,
-          y: 512 - player[id].position.y
-        }, 1000 / (TICK/3), createjs.Ease.Linear)
-      } else {
-        shapes[id].x = players[id].position.x
-        shapes[id].y = players[id].position.y
-      }
-    }
+		const render = DIRECT_SERVER_DISPLAYING && directServerDisplaying || clientSidePrediction
+		render()
   }
   stage.update()
 }
