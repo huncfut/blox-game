@@ -153,8 +153,6 @@ setInterval(() => {
   const allBullets = [...movedBullets, ...newBullets]
 
   // Stun players shot
-  // Change players that fired a bullet
-	// const playersThatFiredABullet = new Set(newBullets.map(bullet => bullet.playerId))
 
   // Remove bullets
 
@@ -166,20 +164,31 @@ setInterval(() => {
 	const inCollisionWithPlayers = new Set(collisionsWithPlayers.map(t => t[0]))
 	const inCollisionWithWalls = new Set(collisionsWithWalls.map(t => t[0]))
 
-	// Move Players
+	// Get shooters
+	const playersThatFiredABullet = new Set(newBullets.map(bullet => bullet.playerId))
+
+	// Update players
   players = R.mapObjIndexed(
+		// Collisions with players (last)
     (player, id) => (inCollisionWithPlayers.has(id)
       && getNewPlayerAfterPlayerCollision(players[id], predPlayers, collisionsWithPlayers)
       || player
 		), R.mapObjIndexed(
-      (player, id) => (inCollisionWithWalls.has(player.id)
+			// Collisions with walls
+      (player, id) => (inCollisionWithWalls.has(id)
         && getNewPlayerAfterWallCollision(players[player.id], predPlayers, collisionsWithWalls)
         || player
 			), R.mapObjIndexed(
-				(player, id) => (inCollisionWithBullets.has(player.id)
+				// Collisions with bullets
+				(player, id) => (inCollisionWithBullets.has(id)
 					&& getNewPlayerAfterBulletCollision(player, allBullets, collisionsWithBullets)
 					|| player
-				), predPlayers)))
+				), R.mapObjIndexed(
+					// Update players bullet cooldown
+					(player, id) => (playersThatFiredABullet.has(id)
+						&& getNewPlayerAfterShot(player)
+						|| player
+					), predPlayers))))
 
 	// Override bullets for next tick
 
