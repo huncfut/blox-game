@@ -160,12 +160,15 @@ setInterval(() => {
 	const collisionsWithBullets = collisionUtils.checkCollisionsWithBullets(predPlayers, allBullets)
 	const collisionsWithPlayers = collisionUtils.checkCollisionsWithPlayers(predPlayers)
 	const collisionsWithWalls = collisionUtils.checkCollisionsWithWalls(predPlayers)
+
+	// Create sets for players
 	const inCollisionWithBullets = new Set(collisionsWithBullets.flatMap(t => t[0]))
 	const inCollisionWithPlayers = new Set(collisionsWithPlayers.map(t => t[0]))
 	const inCollisionWithWalls = new Set(collisionsWithWalls.map(t => t[0]))
 
 	// Get shooters
 	const playersThatFiredABullet = new Set(newBullets.map(bullet => bullet.playerId))
+	const bulletsInCollision = new Set(collisionsWithBullets.map(t => t[1]))
 
 	// Update players
   players = R.mapObjIndexed(
@@ -181,7 +184,7 @@ setInterval(() => {
 			), R.mapObjIndexed(
 				// Collisions with bullets
 				(player, id) => (inCollisionWithBullets.has(id)
-					&& getNewPlayerAfterBulletCollision(player, allBullets, collisionsWithBullets)
+					&& getNewPlayerAfterBulletColliUsion(player, allBullets, collisionsWithBullets)
 					|| player
 				), R.mapObjIndexed(
 					// Update players bullet cooldown
@@ -189,6 +192,9 @@ setInterval(() => {
 						&& getNewPlayerAfterShot(player)
 						|| player
 					), predPlayers))))
+
+	// Update bullets
+	bullets = allBullets.filter(bullet => !bulletsInCollision.has(bullet))
 
 	// Override bullets for next tick
 
