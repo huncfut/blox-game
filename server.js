@@ -47,6 +47,21 @@ const calcNewPlayer = player => {
   }
 }
 
+const moveBullet = bullet => {
+	const {
+		playerId, lastCalcTime, position, velocity, r
+	} = bullet
+	const now = Date.now()
+	const dTime = (now - lastCalcTime) / 1000
+	return {
+		playerId,
+		lastCalcTime: now,
+		position: physics.calcPosition({x:0, y:0}, velocity, position, dTime),
+		velocity,
+		r
+	}
+}
+
 const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
 	const {
     id, nick, held, lastCalcTime, position, velocity, bulletCD, r
@@ -141,6 +156,7 @@ setInterval(() => {
 
   // Combat
   // Move bullets
+	const movedBullets = bullets.map(bullet => moveBullet(bullet))
 
   // Create new bullets
   const newBullets = Object.keys(predPlayers)
