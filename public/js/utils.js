@@ -9,27 +9,28 @@ const utils = {
 
   random: (min, max) => min + Math.random() * (max - min),
 
-  makeParticle: (x, y, x1, y1, size) => {
-    var particle = new createjs.Shape()
-    particle.graphics.beginStroke("#696969").drawRoundRect(0, 0, size, size, 1)
-    particle.regX = size / 2
-    particle.regY = size / 2
-    particle.x = x
-    particle.y = x
-    stage.addChild(particle)
-    let time = utils.random(1000, 1500)
-    createjs.Tween.get(particle, {loop: true})
-      .to({
-        rotation: Math.random() > 0.5 ? 360 : -360
-      }, utils.random(500, 1000), createjs.Ease.linear)
-    createjs.Tween.get(particle, {loop: false})
-      .to({
-        x: x1,
-        y: y1
-      }, time, createjs.Ease.getPowOut(3))
-    createjs.Tween.get(particle, {loop: false})
-      .to({
-        alpha: 0
-      }, time + 500, createjs.Ease.getPowOut(1))
-  }
+	
+  // makeParticle: (x, y, x1, y1, size) => {
+  //   var particle = new createjs.Shape()
+  //   particle.graphics.beginStroke("#696969").drawRoundRect(0, 0, size, size, 1)
+  //   particle.regX = size / 2
+  //   particle.regY = size / 2
+  //   particle.x = x
+  //   particle.y = y
+  //   stage.addChild(particle)
+  //   let time = 150
+  //   createjs.Tween.get(particle, {loop: true})
+  //     .to({
+  //       rotation: Math.random() > 0.5 ? 360 : -360
+  //     }, utils.random(500, 1000), createjs.Ease.linear)
+  //   createjs.Tween.get(particle, {loop: false})
+  //     .to({
+  //       x: x1,
+  //       y: y1
+  //     }, time, createjs.Ease.getPowOut(3))
+  //   createjs.Tween.get(particle, {loop: false})
+  //     .to({
+  //       alpha: 0
+  //     }, time - 20, createjs.Ease.getPowOut(1))
+  // }
 }

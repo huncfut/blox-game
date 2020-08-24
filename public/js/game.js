@@ -13,7 +13,7 @@ const drawBullet = (shape, type, color, size) => {
 
 const newBulletShape = () => {
 	const shape = new createjs.Shape()
-	drawBullet(shape, "beginStroke", black, 4)
+	drawBullet(shape, "beginFill", 'black', 6)
 	return shape
 }
 
@@ -134,7 +134,6 @@ const getNewPlayerAfterPlayerCollision = (player, newPlayers, collisions) => {
 }
 
 const clientSidePrediction = () => {
-	console.log("siema")
 	const newPlayers = R.mapObjIndexed(
 		player => calcNewPlayer(player),
 		players
@@ -177,7 +176,6 @@ const clientSidePrediction = () => {
 }
 
 const directServerDisplaying = () => {
-	console.log("ELo")
 	for(id in pShapes) {
 		pShapes[id].rotation = pShapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
 		pShapes[id].x = players[id].position.x
@@ -185,8 +183,10 @@ const directServerDisplaying = () => {
 	}
 	bullets.forEach((bullet, i) => {
 		bShapes[i] = bShapes[i] ? bShapes[i] : newBulletShape()
+		// bShapes[i].x && utils.makeParticle(bullet.position.x, bullet.position.y, bShapes[i].x, bShapes[i].y, 6)
 		bShapes[i].x = bullet.position.x
 		bShapes[i].y = bullet.position.y
+		utils.makeParticle(bullet.position.x, bullet.position.y, )
 	})
 	bShapes = bShapes.filter((shape, i) => {
 		if(i >= bullets.length) {
@@ -204,7 +204,6 @@ const onTick = () => {
 		const render = DIRECT_SERVER_DISPLAYING && directServerDisplaying || clientSidePrediction
 		render()
   }
-	console.log(bullets)
   stage.update()
 }
 
@@ -223,7 +222,6 @@ const connect = () => {
     ws.onmessage = event => {
       data = JSON.parse(event.data)
       if(data.opcode === "spawned") {
-        console.log(data)
         pShapes[data.id] = new createjs.Shape()
         players[data.id] = newPlayer(data.id, data.nick, Date.now(), data.position)
         if(data.isMe) {

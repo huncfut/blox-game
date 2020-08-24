@@ -8,7 +8,7 @@ const checkCollisionsWithBullets = (players, bullets) => (
       .filter(player => physics.checkCollision(player, bullet) && player.id),
 		bullet
     ]))
-    .filter(t => t[0] !== [])
+    .filter(t => t[0].length !== 0)
 )
 
 const checkCollisionsWithPlayers = players => {

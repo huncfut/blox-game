@@ -137,7 +137,7 @@ const getNewPlayerAfterShot = player => {
   } = player
 	return {
     id, nick, held, lastCalcTime, position, velocity, acceleration,
-    bulletCD: Date.now() + env.BULLETCD,
+    bulletCD: Date.now() + env.BULLET_CD,
     stun, r
   }
 }
@@ -164,6 +164,7 @@ setInterval(() => {
 		.map(id => (
 			predPlayers[id].held.bullet
 				&& predPlayers[id].bulletCD <= Date.now()
+				&& predPlayers[id].stun <= Date.now()
 		    && combatUtils.createBullet(predPlayers, id)
 		))
 		.filter(bullet => bullet)
@@ -192,8 +193,6 @@ setInterval(() => {
 	// Get bullets in Collision set
 	const bulletsInCollision = new Set(collisionsWithBullets.map(t => t[1]))
 
-	console.log(bulletsInCollision)
-
 	// Update players
   players = R.mapObjIndexed(
 		// Collisions with players (last)
@@ -221,6 +220,7 @@ setInterval(() => {
 
 	// Update and override bullets for next tick
 	bullets = allBullets.filter(bullet => !bulletsInCollision.has(bullet))
+	console.log(bullets)
 
 
 
