@@ -1,9 +1,20 @@
-var players = {}, newPlayers = {}, shapes = {}, stage, ws, myId, fireHeld = false, bullets = []
+var players = {}, newPlayers = {}, pShapes = {}, bShapes = [], stage, ws, myId, fireHeld = false, bullets = []
 
-const drawShape = (shape, type, color, size) => {
+const drawPlayer = (shape, type, color, size) => {
   shape.graphics[type](color).drawRect(shape.x, shape.y, size, size)
   shape.regX = shape.regY = size / 2
   stage.addChild(shape)
+}
+
+const drawBullet = (shape, type, color, size) => {
+	shape.graphics[type](color).drawCircle(shape.x, shape.y, size)
+	stage.addChild(shape)
+}
+
+const newBulletShape = () => {
+	const shape = new createjs.Shape()
+	drawBullet(shape, "beginStroke", black, 4)
+	return shape
 }
 
 const calcNewPlayer = player => {
@@ -146,32 +157,45 @@ const clientSidePrediction = () => {
 		)
 	)
 
-	// Update shapes
-	for(id in shapes) {
-		const vecDist = physics.subVec(players[id].position, {x: shapes[id].x, y: shapes[id].y})
-		shapes[id].rotation = shapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
+	// Update pShapes
+	for(id in pShapes) {
+		const vecDist = physics.subVec(players[id].position, {x: pShapes[id].x, y: pShapes[id].y})
+		pShapes[id].rotation = pShapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
 		//If distance between shape and actual position is 2 times greater than actual velocity
 		//and greater than maximum speed
 		if((physics.scalMultVec(vecDist, .5) > players[id].velocity) && (physics.vecLen(vecDist) > 0)) {
-			createjs.Tween.get(shapes[data.id], {loop: false})
+			createjs.Tween.get(pShapes[data.id], {loop: false})
 			.to({
 				x: player[id].position.x,
 				y: 512 - player[id].position.y
 			}, 1000 / (TICK/3), createjs.Ease.Linear)
 		} else {
-			shapes[id].x = players[id].position.x
-			shapes[id].y = players[id].position.y
+			pShapes[id].x = players[id].position.x
+			pShapes[id].y = players[id].position.y
 		}
 	}
 }
 
 const directServerDisplaying = () => {
 	console.log("ELo")
-	for(id in shapes) {
-		shapes[id].rotation = shapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
-		shapes[id].x = players[id].position.x
-		shapes[id].y = players[id].position.y
+	for(id in pShapes) {
+		pShapes[id].rotation = pShapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
+		pShapes[id].x = players[id].position.x
+		pShapes[id].y = players[id].position.y
 	}
+	bullets.forEach((bullet, i) => {
+		bShapes[i] = bShapes[i] ? bShapes[i] : newBulletShape()
+		bShapes[i].x = bullet.position.x
+		bShapes[i].y = bullet.position.y
+	})
+	bShapes = bShapes.filter((shape, i) => {
+		if(i >= bullets.length) {
+			stage.removeChild(shape)
+			return 0
+		}
+		return 1
+	})
+
 }
 
 const onTick = () => {
@@ -180,6 +204,7 @@ const onTick = () => {
 		const render = DIRECT_SERVER_DISPLAYING && directServerDisplaying || clientSidePrediction
 		render()
   }
+	console.log(bullets)
   stage.update()
 }
 
@@ -199,13 +224,13 @@ const connect = () => {
       data = JSON.parse(event.data)
       if(data.opcode === "spawned") {
         console.log(data)
-        shapes[data.id] = new createjs.Shape()
+        pShapes[data.id] = new createjs.Shape()
         players[data.id] = newPlayer(data.id, data.nick, Date.now(), data.position)
         if(data.isMe) {
           myId = data.id
-          drawShape(shapes[myId], 'beginStroke', 'black', 28)
+          drawPlayer(pShapes[myId], 'beginStroke', 'black', 28)
         } else {
-          drawShape(shapes[data.id], 'beginFill', 'black', 28)
+          drawPlayer(pShapes[data.id], 'beginFill', 'black', 28)
         }
       }
       if (data.opcode === "player") {
@@ -216,8 +241,8 @@ const connect = () => {
       if(data.opcode === "newBullets") {
         bullets.push(...data.newBullets)
       }
-      if(data.opcode === "newBullets") {
-        bullets.filter(bullet => bullet)
+      if(data.opcode === "bullets") {
+        bullets = data.bullets
       }
     }
   }

@@ -11,12 +11,12 @@ const createBullet = (players, playerId) => {
     playerId: playerId,
 		lastCalcTime: Date.now(),
     position: physics.addVec(
-      players[id].position,
+      players[playerId].position,
       physics.scalMultVec(
-        physics.subVec(players[target.id].position, players[playerId].position.x),
-        (players[id].r + 5)/target.d
+        physics.subVec(players[target.id].position, players[playerId].position),
+        (players[playerId].r + 5)/target.d
     )),
-    velocity: physics.scalMultVec(physics.subVec(players[target.id].position, players[playerId].position), bulletSpeed/target.d),
+    velocity: physics.scalMultVec(physics.subVec(players[target.id].position, players[playerId].position), env.BULLET_SPEED/target.d),
     r: 4
   }
 }

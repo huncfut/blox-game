@@ -121,7 +121,7 @@ const getNewPlayerAfterPlayerCollision = (player, predPlayers, collisions) => {
     held,
     lastCalcTime,
     position,
-    newVelocity,
+    velocity: newVelocity,
     acceleration: {x:0, y:0},
     bulletCD,
     stun: Date.now() + env.STUN_LENGTH,
@@ -144,6 +144,7 @@ const getNewPlayerAfterShot = player => {
 
 
 setInterval(() => {
+
   checkId(players) || console.log("Wrong id in players: ", players) && error.error.adfsdsfas.asads
 
   const predPlayers = R.mapObjIndexed(
@@ -160,13 +161,18 @@ setInterval(() => {
 
   // Create new bullets
   const newBullets = Object.keys(predPlayers)
-    .filter(id => (
-      predPlayers[id].held.bullet
-      && combatUtils.createBullet(predPlayers, id)
-    ))
+		.map(id => (
+			predPlayers[id].held.bullet
+				&& predPlayers[id].bulletCD <= Date.now()
+		    && combatUtils.createBullet(predPlayers, id)
+		))
+		.filter(bullet => bullet)
+
 
   // Merge bullets
   const allBullets = [...predBullets, ...newBullets]
+
+
 
   // Stun players shot
 
@@ -185,6 +191,8 @@ setInterval(() => {
 
 	// Get bullets in Collision set
 	const bulletsInCollision = new Set(collisionsWithBullets.map(t => t[1]))
+
+	console.log(bulletsInCollision)
 
 	// Update players
   players = R.mapObjIndexed(
@@ -209,8 +217,13 @@ setInterval(() => {
 						|| player
 					), predPlayers))))
 
+
+
 	// Update and override bullets for next tick
 	bullets = allBullets.filter(bullet => !bulletsInCollision.has(bullet))
+
+
+
 
 }, 1000/env.TICK)
 
