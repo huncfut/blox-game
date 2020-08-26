@@ -8,50 +8,50 @@ var held = {
 }
 
 const handleKeyDown = e => {
-  switch (e.keyCode) {
-    case KEYCODE_W:
-    case KEYCODE_ARROW_UP:
-      held.up = true;
-      break
-    case KEYCODE_S:
-    case KEYCODE_ARROW_DOWN:
-      held.down = true;
-      break
-    case KEYCODE_A:
-    case KEYCODE_ARROW_LEFT:
+  switch (e.key) {
+    case "w":
+    case "ArrowUp":
+      held.up = true
+      return 1
+    case "s":
+    case "ArrowDown":
+      held.down = true
+      return 1
+    case "a":
+    case "ArrowLeft":
       held.left = true
-      break
-    case KEYCODE_D:
-    case KEYCODE_ARROW_RIGHT:
+      return 1
+    case "d":
+    case "ArrowRight":
       held.right = true
-      break;
-    case KEYCODE_2:
-    case KEYCODE_BRACKET_RIGHT:
+      return 1
+    case "2":
+    case "]":
       held.bullet = true
-      break;
+      return 1
   }
 }
 
 const handleKeyUp = e => {
-  switch (e.keyCode) {
-    case KEYCODE_W:
-    case KEYCODE_ARROW_UP:
+  switch (e.key) {
+    case "w":
+    case "ArrowUp":
       held.up = false
       break
-    case KEYCODE_S:
-    case KEYCODE_ARROW_DOWN:
+    case "s":
+    case "ArrowDown":
       held.down = false
       break
-    case KEYCODE_A:
-    case KEYCODE_ARROW_LEFT:
+    case "a":
+    case "ArrowLeft":
       held.left = false
       break
-    case KEYCODE_D:
-    case KEYCODE_ARROW_RIGHT:
+    case "d":
+    case "ArrowRight":
       held.right = false
       break
-    case KEYCODE_2:
-    case KEYCODE_BRACKET_RIGHT:
+    case "2":
+    case "]":
       held.bullet = false
       break;
   }

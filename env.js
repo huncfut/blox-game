@@ -1,5 +1,5 @@
 module.exports = {
-  MAX_SPEED: 1000,
+  MAX_SPEED: 600,
   ACCELERATION: 4000,
   TICK: 60,
   SEND_TICK: 60,
@@ -10,5 +10,5 @@ module.exports = {
   BOUNCE_COEFFICIENT: 2/3,
   BULLET_CD: 300,
   STUN_LENGTH: 500,
-  BULLET_SPEED: 1010
+  BULLET_SPEED: 700
 }

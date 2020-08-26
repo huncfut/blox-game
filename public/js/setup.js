@@ -6,6 +6,12 @@ var init = () => {
   stage = new createjs.Stage("demoCanvas")
   createjs.Ticker.framerate = TICK
   createjs.Ticker.addEventListener("tick", onTick)
-  document.addEventListener('keyup', handleKeyUp)
-  document.addEventListener('keydown', handleKeyDown)
+  document.addEventListener('keyup', e => {
+		e.preventDefault()
+		handleKeyUp(e)
+	})
+  document.addEventListener('keydown', e => {
+		e.preventDefault()
+		e.repeat || handleKeyDown(e)
+	})
 }

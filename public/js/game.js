@@ -186,7 +186,6 @@ const directServerDisplaying = () => {
 		// bShapes[i].x && utils.makeParticle(bullet.position.x, bullet.position.y, bShapes[i].x, bShapes[i].y, 6)
 		bShapes[i].x = bullet.position.x
 		bShapes[i].y = bullet.position.y
-		utils.makeParticle(bullet.position.x, bullet.position.y, )
 	})
 	bShapes = bShapes.filter((shape, i) => {
 		if(i >= bullets.length) {
