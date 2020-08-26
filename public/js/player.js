@@ -22,7 +22,5 @@ const newPlayer = (id, nick, time, position, velocity, acceleration, r) => ({
     x: 0,
     y: 0
   },
-  bulletCD: 0,
   isStunned: false,
-
 })

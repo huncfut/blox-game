@@ -1,4 +1,4 @@
-var players = {}, newPlayers = {}, pShapes = {}, bShapes = [], stage, ws, myId, fireHeld = false, bullets = []
+var players = {}, predPlayers = {}, pShapes = {}, bShapes = [], stage, ws, myId, bullets = [], predBullets = []
 
 const drawPlayer = (shape, type, color, size) => {
   shape.graphics[type](color).drawRect(shape.x, shape.y, size, size)
@@ -19,7 +19,7 @@ const newBulletShape = () => {
 
 const calcNewPlayer = player => {
   const {
-    id, nick, lastCalcTime, position, velocity, acceleration, bulletCD, stun, r
+    id, nick, lastCalcTime, position, velocity, acceleration, stun, r
   } = player
   const now = Date.now()
   const dTime = (now - lastCalcTime) / 1000
@@ -30,7 +30,6 @@ const calcNewPlayer = player => {
     position: physics.calcPosition(acceleration, velocity, position, dTime),
     velocity: physics.calcVelocity(acceleration, velocity, dTime),
     acceleration,
-    bulletCD,
     stun,
     r,
   } || {
@@ -40,34 +39,67 @@ const calcNewPlayer = player => {
     position: physics.calcPosition(acceleration, velocity, position, dTime),
     velocity: physics.calcVelocity(acceleration, velocity, dTime),
     acceleration: physics.calcAcceleration(held, velocity, dTime, (stun > now)),
-    bulletCD,
     stun,
     r,
   }
 }
 
+const moveBullet = bullet => {
+	const {
+		playerId, lastCalcTime, position, velocity, r
+	} = bullet
+	const now = Date.now()
+	const dTime = (now - lastCalcTime) / 1000
+	return {
+		playerId,
+		lastCalcTime: now,
+		position: physics.calcPosition({x:0, y:0}, velocity, position, dTime),
+		velocity,
+		r
+	}
+}
+
+// CLIENT SIDE PREDICTION
+
 const clientSidePrediction = () => {
-	const newPlayers = R.mapObjIndexed(
+	const predPlayers = R.mapObjIndexed(
 		player => calcNewPlayer(player),
 		players
 	)
 
-	const collisionsWithPlayers = checkCollisionsWithPlayers(newPlayers)
-	const collisionsWithWalls = checkCollisionsWithWalls(newPlayers)
-	const inCollisionWithPlayers = getCollisionWithPlayers(collisionsWithPlayers)
-	const inCollisionWithWalls = getCollisionWithWalls(collisionsWithWalls)
+	const predBullets = bullets.map(bullet => moveBullet(bullet))
 
-	players = R.mapObjIndexed(
-		(player, id) => inCollisionWithPlayers.has(id)
-			&& getNewPlayerAfterPlayerCollision(players[id], newPlayers, collisionsWithPlayers)
-			|| player,
-		R.mapObjIndexed(
-			(player, id) => inCollisionWithWalls.has(player.id)
-				&& getNewPlayerAfterWallCollision(players[player.id], newPlayers, collisionsWithWalls)
-				|| player,
-			newPlayers
-		)
-	)
+	// Get collisions
+	const collisionsWithPlayers = checkCollisionsWithPlayers(predPlayers)
+	const collisionsWithWalls = checkCollisionsWithWalls(predPlayers)
+	const collisionsWithBullets = checkCollisionsWithBullets(predPlayers, bullets)
+
+	// Create sets
+	const inCollisionWithPlayers = new Set(collisionsWithPlayers.map(t => t[0]))
+	const inCollisionWithWalls = new Set(collisionsWithWalls.map(t => t[0]))
+	const inCollisionWithBullets = new Set(collisionsWithBullets.map(t => t[0]))
+	const bulletsInCollision = new Set(collisionsWithBullets.map(t => t[1]))
+
+
+	// Update players
+  players = R.mapObjIndexed(
+		// Collisions with players (last)
+    (player, id) => (inCollisionWithPlayers.has(id)
+      && getNewPlayerAfterPlayerCollision(players[id], predPlayers, collisionsWithPlayers)
+      || player
+		), R.mapObjIndexed(
+			// Collisions with walls
+      (player, id) => (inCollisionWithWalls.has(id)
+        && getNewPlayerAfterWallCollision(players[player.id], predPlayers, collisionsWithWalls)
+        || player
+			), R.mapObjIndexed(
+				// Collisions with bullets
+				(player, id) => (inCollisionWithBullets.has(id)
+					&& getNewPlayerAfterBulletCollision(player, allBullets, collisionsWithBullets)
+					|| player
+				), predPlayers)))
+
+	bullets = predBullets.filter(bullet => !bulletsInCollision.has(bullet))
 
 	// Update pShapes
 	for(id in pShapes) {
@@ -86,7 +118,22 @@ const clientSidePrediction = () => {
 			pShapes[id].y = players[id].position.y
 		}
 	}
+	bullets.forEach((bullet, i) => {
+		bShapes[i] = bShapes[i] ? bShapes[i] : newBulletShape()
+		bShapes[i].x && utils.bulletParticles(bullet.position, {x: bShapes[i].x, y: bShapes[i].y})
+		bShapes[i].x = bullet.position.x
+		bShapes[i].y = bullet.position.y
+	})
+	bShapes = bShapes.filter((shape, i) => {
+		if(i >= bullets.length) {
+			stage.removeChild(shape)
+			return 0
+		}
+		return 1
+	})
 }
+
+// DIRECT SERVER DISPLAYING
 
 const directServerDisplaying = () => {
 	for(id in pShapes) {
@@ -109,7 +156,6 @@ const directServerDisplaying = () => {
 		}
 		return 1
 	})
-
 }
 
 const onTick = () => {

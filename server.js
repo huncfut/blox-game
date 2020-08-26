@@ -207,7 +207,7 @@ setInterval(() => {
 			), R.mapObjIndexed(
 				// Collisions with bullets
 				(player, id) => (inCollisionWithBullets.has(id)
-					&& getNewPlayerAfterBulletColliUsion(player, allBullets, collisionsWithBullets)
+					&& getNewPlayerAfterBulletCollision(player, allBullets, collisionsWithBullets)
 					|| player
 				), R.mapObjIndexed(
 					// Update players bullet cooldown

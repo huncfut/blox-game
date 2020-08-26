@@ -24,28 +24,24 @@ const checkCollisionsWithWalls = players => (
     .filter(t => t[1].length>0)
 )
 
-const getCollisionWithPlayers = collisionsWithPlayers => {
-  return new Set(collisionsWithPlayers.map(t => t[0]))
-}
+const checkCollisionsWithBullets = (players, bullets) => (
+  bullets.map(bullet => ([
+		Object.values(players)
+      .filter(player => physics.checkCollision(player, bullet) && player.id),
+		bullet
+    ]))
+    .filter(t => t[0].length !== 0)
+)
 
-const getCollisionWithWalls = collisionsWithWalls => {
-  return new Set(collisionsWithWalls.map(t => t[0]))
-}
-
-const getNewPlayerAfterWallCollision = (player, newPlayers, collisions) => {
+const getNewPlayerAfterWallCollision = (player, predPlayers, collisions) => {
   const {
-    id, nick, held, lastCalcTime, position, velocity, bulletCD, stun, r
+    id, nick, held, lastCalcTime, position, velocity, r
   } = player
   const walls = collisions.filter(t => t[0] === id)[0][1]
-
-  const newVelocity = walls.reduce(
-    (v, wall) => {
-      const y = (wall === 'N' || wall === 'S') && -v.y*2/3 || v.y
-      const x = (wall === 'E' || wall === 'W') && -v.x*2/3 || v.x
-      return {
-        x,
-        y
-      }
+  const newVelocity = walls.reduce((v, wall) => {
+      const y = (wall === 'N' || wall === 'S') && -v.y*BOUNCE_COEFFICIENT || v.y
+      const x = (wall === 'E' || wall === 'W') && -v.x*BOUNCE_COEFFICIENT || v.x
+      return { x, y }
     },
     velocity
   )
@@ -57,30 +53,46 @@ const getNewPlayerAfterWallCollision = (player, newPlayers, collisions) => {
     position,
     velocity: newVelocity,
     acceleration: {x:0, y:0},
-    bulletCD,
     stun: Date.now() + STUN_LENGTH,
     r
   }
 }
 
-const getNewPlayerAfterPlayerCollision = (player, newPlayers, collisions) => {
+const getNewPlayerAfterPlayerCollision = (player, predPlayers, collisions) => {
   const {
-    id, nick, held, lastCalcTime, position, bulletCD, stun, r
+    id, nick, held, lastCalcTime, position, stun, r
   } = player
-  const velocity = collisions.filter(t => t[0] === id)
-    .map(t => physics.doCollision(newPlayers[t[0]], newPlayers[t[1]]))
+  const newVelocity = collisions.filter(t => t[0] === id)
+    .map(t => physics.doCollision(predPlayers[t[0]], predPlayers[t[1]]))
     .reduce(physics.addVec)
-
   return {
     id,
     nick,
     held,
     lastCalcTime,
     position,
-    velocity,
+    velocity: newVelocity,
     acceleration: {x:0, y:0},
-    bulletCD,
     stun: Date.now() + STUN_LENGTH,
     r
   }
+}
+
+const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
+	const {
+    id, nick, held, lastCalcTime, position, velocity, r
+  } = player
+	const newVelocity = collisions.filter(t => t[0].reduce((acc, p) => acc || p.id === id))
+		.reduce(physics.addVec(v, bullet.velocity), velocity)
+	return {
+		id,
+    nick,
+    held,
+    lastCalcTime,
+    position,
+    velocity: newVelocity,
+    acceleration: {x:0, y:0},
+    stun: Date.now() + STUN_LENGTH,
+    r
+	}
 }
