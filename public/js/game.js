@@ -72,7 +72,7 @@ const clientSidePrediction = () => {
 	// Get collisions
 	const collisionsWithPlayers = checkCollisionsWithPlayers(predPlayers)
 	const collisionsWithWalls = checkCollisionsWithWalls(predPlayers)
-	const collisionsWithBullets = checkCollisionsWithBullets(predPlayers, bullets)
+	const collisionsWithBullets = checkCollisionsWithBullets(predPlayers, predBullets)
 
 	// Create sets
 	const inCollisionWithPlayers = new Set(collisionsWithPlayers.map(t => t[0]))

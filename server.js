@@ -66,8 +66,9 @@ const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
 	const {
     id, nick, held, lastCalcTime, position, velocity, bulletCD, r
   } = player
-	const newVelocity = collisions.filter(t => t[0].reduce((acc, p) => acc || p.id === id))
-		.reduce(physics.addVec(v, bullet.velocity), velocity)
+	const newVelocity = collisions.map(t => ([t[0].filter(player => player.id === id), t[1]]))
+		.filter(t => t[0].length)
+		.reduce((acc, t) => physics.addVec(acc, t[1].velocity), velocity)
 	return {
 		id,
     nick,
@@ -153,8 +154,6 @@ setInterval(() => {
 
   checkId(predPlayers) || console.log("Wrong id in predPlayers", predPlayers) && error.error.eradasdsadsdsa.asd
 
-  // Collisions
-
   // Combat
   // Move bullets
 	const predBullets = bullets.map(bullet => moveBullet(bullet))
@@ -173,19 +172,13 @@ setInterval(() => {
   // Merge bullets
   const allBullets = [...predBullets, ...newBullets]
 
-
-
-  // Stun players shot
-
-  // Remove bullets
-
 	// Check collisions
 	const collisionsWithBullets = collisionUtils.checkCollisionsWithBullets(predPlayers, allBullets)
 	const collisionsWithPlayers = collisionUtils.checkCollisionsWithPlayers(predPlayers)
 	const collisionsWithWalls = collisionUtils.checkCollisionsWithWalls(predPlayers)
 
 	// Create sets for players
-	const inCollisionWithBullets = new Set(collisionsWithBullets.flatMap(t => t[0]))
+	const inCollisionWithBullets = new Set(collisionsWithBullets.flatMap(t => t[0]).map(({ id }) => id))
 	const inCollisionWithPlayers = new Set(collisionsWithPlayers.map(t => t[0]))
 	const inCollisionWithWalls = new Set(collisionsWithWalls.map(t => t[0]))
 	const playersThatFiredABullet = new Set(newBullets.map(bullet => bullet.playerId))
@@ -216,14 +209,8 @@ setInterval(() => {
 						|| player
 					), predPlayers))))
 
-
-
 	// Update and override bullets for next tick
 	bullets = allBullets.filter(bullet => !bulletsInCollision.has(bullet))
-	console.log(bullets)
-
-
-
 
 }, 1000/env.TICK)
 
