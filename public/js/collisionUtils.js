@@ -82,8 +82,9 @@ const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
 	const {
     id, nick, held, lastCalcTime, position, velocity, r
   } = player
-	const newVelocity = collisions.filter(t => t[0].reduce((acc, p) => acc || p.id === id))
-		.reduce(physics.addVec(v, bullet.velocity), velocity)
+	const newVelocity = collisions.map(t => ([t[0].filter(player => player.id === id), t[1]]))
+		.filter(t => t[0].length)
+		.reduce((acc, t) => physics.addVec(acc, t[1].velocity), velocity)
 	return {
 		id,
     nick,

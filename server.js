@@ -23,6 +23,9 @@ let players = {}
 let wsList = {}
 let bullets = []
 let uuid = 0
+var ticks = []
+var t0 = Date.now()
+var t1
 const generateUUID = () => `${uuid++}`
 
 // Create new Player
@@ -66,9 +69,13 @@ const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
 	const {
     id, nick, held, lastCalcTime, position, velocity, bulletCD, r
   } = player
+
+	// It is slowing down the client significantly - WHY!!!
 	const newVelocity = collisions.map(t => ([t[0].filter(player => player.id === id), t[1]]))
 		.filter(t => t[0].length)
-		.reduce((acc, t) => physics.addVec(acc, t[1].velocity), velocity)
+		.map(t => physics.doCollision(player, t[1]))
+		.reduce(physics.addVec)
+	// const newVelocity = {x: 1000, y: 1000}
 	return {
 		id,
     nick,
@@ -144,7 +151,16 @@ const getNewPlayerAfterShot = player => {
 }
 
 
+setInterval(() => console.log(ticks.reduce((acc, val) => acc + val)/ticks.length), 1000)
+
 setInterval(() => {
+
+	t1 = Date.now()
+	ticks.push(t1-t0)
+	if(ticks.length >= 60) {
+		ticks.shift()
+	}
+	t0 = t1
 
   checkId(players) || console.log("Wrong id in players: ", players) && error.error.adfsdsfas.asads
 
@@ -209,8 +225,10 @@ setInterval(() => {
 						|| player
 					), predPlayers))))
 
+	console.log(bullets)
+
 	// Update and override bullets for next tick
-	bullets = allBullets.filter(bullet => !bulletsInCollision.has(bullet))
+	bullets = allBullets.filter(bullet => !bulletsInCollision.has(bullet) && bullet.position.x >= 0 && bullet.position.x <= 512 && bullet.position.y >= 0 && bullet.position.y <= 512)
 
 }, 1000/env.TICK)
 

@@ -77,7 +77,7 @@ const clientSidePrediction = () => {
 	// Create sets
 	const inCollisionWithPlayers = new Set(collisionsWithPlayers.map(t => t[0]))
 	const inCollisionWithWalls = new Set(collisionsWithWalls.map(t => t[0]))
-	const inCollisionWithBullets = new Set(collisionsWithBullets.map(t => t[0]))
+	const inCollisionWithBullets = new Set(collisionsWithBullets.flatMap(t => t[0]).map(({ id }) => id))
 	const bulletsInCollision = new Set(collisionsWithBullets.map(t => t[1]))
 
 

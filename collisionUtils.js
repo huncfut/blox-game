@@ -4,9 +4,9 @@ const env = require('./env')
 
 const checkCollisionsWithBullets = (players, bullets) => (
   bullets.map(bullet => ([
-		Object.values(players)
-      .filter(player => physics.checkCollision(player, bullet) && player.id),
-		bullet
+			Object.values(players)
+	      .filter(player => physics.checkCollision(player, bullet) && player.id),
+			bullet
     ]))
     .filter(t => t[0].length !== 0)
 )
