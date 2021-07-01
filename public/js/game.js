@@ -73,13 +73,17 @@ const clientSidePrediction = () => {
 	const collisionsWithPlayers = checkCollisionsWithPlayers(predPlayers)
 	const collisionsWithWalls = checkCollisionsWithWalls(predPlayers)
 	const collisionsWithBullets = checkCollisionsWithBullets(predPlayers, predBullets)
+	const bulletCollisionsWithWalls = checkCollisionsWithWalls(predBullets)
 
 	// Create sets
 	const inCollisionWithPlayers = new Set(collisionsWithPlayers.map(t => t[0]))
 	const inCollisionWithWalls = new Set(collisionsWithWalls.map(t => t[0]))
 	const inCollisionWithBullets = new Set(collisionsWithBullets.flatMap(t => t[0]).map(({ id }) => id))
-	const bulletsInCollision = new Set(collisionsWithBullets.map(t => t[1]))
 
+	// Set up bullets to remove
+	const bulletsInCollisionWithPlayers = new Set(collisionsWithBullets.map(t => t[1]))
+	const bulletsInCollisionWithWalls = new Set(bulletCollisionsWithWalls.map(t => t[0]))
+	const bulletsToRemove = new Set([...bulletsInCollisionWithWalls, ...bulletsInCollisionWithPlayers])
 
 	// Update players
   players = R.mapObjIndexed(
@@ -95,11 +99,11 @@ const clientSidePrediction = () => {
 			), R.mapObjIndexed(
 				// Collisions with bullets
 				(player, id) => (inCollisionWithBullets.has(id)
-					&& getNewPlayerAfterBulletCollision(player, allBullets, collisionsWithBullets)
+					&& getNewPlayerAfterBulletCollision(player, predBullets, collisionsWithBullets)
 					|| player
 				), predPlayers)))
 
-	bullets = predBullets.filter(bullet => !bulletsInCollision.has(bullet))
+	bullets = predBullets.filter(bullet => !bulletsToRemove.has(bullet))
 
 	// Update pShapes
 	for(id in pShapes) {
@@ -107,12 +111,23 @@ const clientSidePrediction = () => {
 		pShapes[id].rotation = pShapes[id].rotation + 2 + physics.vecLen(players[id].velocity)/35 || 0
 		//If distance between shape and actual position is 2 times greater than actual velocity
 		//and greater than maximum speed
-		if((physics.scalMultVec(vecDist, .5) > players[id].velocity) && (physics.vecLen(vecDist) > 0)) {
-			createjs.Tween.get(pShapes[data.id], {loop: false})
+		// if((physics.scalMultVec(vecDist, .5) > players[id].velocity) && (physics.vecLen(vecDist) > 0)) {
+		// 	createjs.Tween.get(pShapes[data.id], {loop: false})
+		// 	.to({
+		// 		x: player[id].position.x,
+		// 		y: 512 - player[id].position.y
+		// 	}, 1000 / (TICK/3), createjs.Ease.Linear)
+		// } else {
+		// 	pShapes[id].x = players[id].position.x
+		// 	pShapes[id].y = players[id].position.y
+		// }
+		if(pShapes[id].x) {
+      console.log(data)
+			createjs.Tween.get(pShapes[id], {loop: false})
 			.to({
-				x: player[id].position.x,
-				y: 512 - player[id].position.y
-			}, 1000 / (TICK/3), createjs.Ease.Linear)
+				x: players[id].position.x,
+				y: 512 - players[id].position.y
+			}, 1000 / (TICK), createjs.Ease.Linear)
 		} else {
 			pShapes[id].x = players[id].position.x
 			pShapes[id].y = players[id].position.y
@@ -141,14 +156,12 @@ const directServerDisplaying = () => {
 		pShapes[id].x = players[id].position.x
 		pShapes[id].y = players[id].position.y
 	}
-	bullets.forEach((bullet, i) => {
-		bShapes[i] = bShapes[i] ? bShapes[i] : newBulletShape()
-		// bShapes[i].x && utils.makeParticle(bullet.position.x, bullet.position.y, bShapes[i].x, bShapes[i].y, 6)
-		bShapes[i].x && utils.bulletParticles(bullet.position, {x: bShapes[i].x, y: bShapes[i].y})
-		bShapes[i].x = bullet.position.x
-		bShapes[i].y = bullet.position.y
-
-	})
+	// bullets.forEach((bullet, i) => {
+	// 	bShapes[i] = bShapes[i] ? bShapes[i] : newBulletShape()
+	// 	bShapes[i].x && utils.bulletParticles(bullet.position, {x: bShapes[i].x, y: bShapes[i].y})
+	// 	bShapes[i].x = bullet.position.x
+	// 	bShapes[i].y = bullet.position.y
+	// })
 	bShapes = bShapes.filter((shape, i) => {
 		if(i >= bullets.length) {
 			stage.removeChild(shape)

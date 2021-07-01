@@ -10,16 +10,16 @@ const checkCollisionsWithPlayers = players => {
   return collisions
 }
 
-const checkCollisionsWithWalls = players => (
-  Object.values(players)
-    .map(player => {
-      const { position: { x, y }, r } = player
+const checkCollisionsWithWalls = entities => (
+  Object.values(entities)
+    .map(entity => {
+      const { position: { x, y }, r } = entity
       var walls = []
-      y + r > 512 && walls.push('N')
+      y + r > GAME_HEIGHT && walls.push('N')
       x - r < 0 && walls.push('W')
       y - r < 0 && walls.push('S')
-      x + r > 512 && walls.push('E')
-      return [player.id, walls]
+      x + r > GAME_WIDTH && walls.push('E')
+      return [(typeof entity.id !== 'undefined') ? entity.id : entity, walls]
     })
     .filter(t => t[1].length>0)
 )

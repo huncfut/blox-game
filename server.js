@@ -184,6 +184,10 @@ setInterval(() => {
 		))
 		.filter(bullet => bullet)
 
+	broadcast({
+		opcode: 'newBullets',
+		newBullets
+	})
 
   // Merge bullets
   const allBullets = [...predBullets, ...newBullets]
@@ -192,6 +196,7 @@ setInterval(() => {
 	const collisionsWithBullets = collisionUtils.checkCollisionsWithBullets(predPlayers, allBullets)
 	const collisionsWithPlayers = collisionUtils.checkCollisionsWithPlayers(predPlayers)
 	const collisionsWithWalls = collisionUtils.checkCollisionsWithWalls(predPlayers)
+	const bulletCollisionsWithWalls = collisionUtils.checkCollisionsWithWalls(predBullets)
 
 	// Create sets for players
 	const inCollisionWithBullets = new Set(collisionsWithBullets.flatMap(t => t[0]).map(({ id }) => id))
@@ -200,7 +205,9 @@ setInterval(() => {
 	const playersThatFiredABullet = new Set(newBullets.map(bullet => bullet.playerId))
 
 	// Get bullets in Collision set
-	const bulletsInCollision = new Set(collisionsWithBullets.map(t => t[1]))
+	const bulletsInCollisionWithPlayers = new Set(collisionsWithBullets.map(t => t[1]))
+	const bulletsInCollisionWithWalls = new Set(bulletCollisionsWithWalls.map(t => t[0]))
+	const bulletsToRemove = new Set([...bulletsInCollisionWithWalls, ...bulletsInCollisionWithPlayers])
 
 	// Update players
   players = R.mapObjIndexed(
@@ -225,10 +232,8 @@ setInterval(() => {
 						|| player
 					), predPlayers))))
 
-	console.log(bullets)
-
 	// Update and override bullets for next tick
-	bullets = allBullets.filter(bullet => !bulletsInCollision.has(bullet) && bullet.position.x >= 0 && bullet.position.x <= 512 && bullet.position.y >= 0 && bullet.position.y <= 512)
+	bullets = allBullets.filter(bullet => !bulletsToRemove.has(bullet))
 
 }, 1000/env.TICK)
 
@@ -297,8 +302,8 @@ const handlePacket = (uuid, packet) => {
       }
       players[uuid] = newPlayer(uuid, data.nick)
       players[uuid].position = {
-        x: ~~(Math.random() * 496) + 8,
-        y: ~~(Math.random() * 496) + 8
+        x: 200,
+        y: 200
       }
 
       // Send existing players
