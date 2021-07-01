@@ -126,7 +126,7 @@ const clientSidePrediction = () => {
 			createjs.Tween.get(pShapes[id], {loop: false})
 			.to({
 				x: players[id].position.x,
-				y: 512 - players[id].position.y
+				y: players[id].position.y
 			}, 1000 / (TICK), createjs.Ease.Linear)
 		} else {
 			pShapes[id].x = players[id].position.x
