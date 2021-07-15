@@ -85,7 +85,8 @@ const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
     velocity: newVelocity,
     acceleration: {x:0, y:0},
     bulletCD,
-    stun: Date.now() + env.STUN_LENGTH,
+    // stun: Date.now() + env.STUN_LENGTH,
+    stun: 0
     r
 	}
 }

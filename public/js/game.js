@@ -60,7 +60,7 @@ const moveBullet = bullet => {
 }
 
 // CLIENT SIDE PREDICTION
-
+// ---- OBSOLETE ----
 const clientSidePrediction = () => {
 	const predPlayers = R.mapObjIndexed(
 		player => calcNewPlayer(player),
