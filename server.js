@@ -70,7 +70,6 @@ const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
     id, nick, held, lastCalcTime, position, velocity, bulletCD, r
   } = player
 
-	// It is slowing down the client significantly - WHY!!!
 	const newVelocity = collisions.map(t => ([t[0].filter(player => player.id === id), t[1]]))
 		.filter(t => t[0].length)
 		.map(t => physics.doCollision(player, t[1]))
@@ -86,7 +85,7 @@ const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
     acceleration: {x:0, y:0},
     bulletCD,
     // stun: Date.now() + env.STUN_LENGTH,
-    stun: 0
+    stun: 0,
     r
 	}
 }

@@ -156,12 +156,12 @@ const directServerDisplaying = () => {
 		pShapes[id].x = players[id].position.x
 		pShapes[id].y = players[id].position.y
 	}
-	// bullets.forEach((bullet, i) => {
-	// 	bShapes[i] = bShapes[i] ? bShapes[i] : newBulletShape()
-	// 	bShapes[i].x && utils.bulletParticles(bullet.position, {x: bShapes[i].x, y: bShapes[i].y})
-	// 	bShapes[i].x = bullet.position.x
-	// 	bShapes[i].y = bullet.position.y
-	// })
+	bullets.forEach((bullet, i) => {
+		bShapes[i] = bShapes[i] ? bShapes[i] : newBulletShape()
+		bShapes[i].x && utils.bulletParticles(bullet.position, {x: bShapes[i].x, y: bShapes[i].y})
+		bShapes[i].x = bullet.position.x
+		bShapes[i].y = bullet.position.y
+	})
 	bShapes = bShapes.filter((shape, i) => {
 		if(i >= bullets.length) {
 			stage.removeChild(shape)

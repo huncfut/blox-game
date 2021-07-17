@@ -11,4 +11,5 @@ const PORT = 8082
 const GAME_HEIGHT = 512
 const GAME_WIDTH = 512
 
-const DIRECT_SERVER_DISPLAYING = false
+// Obsolete
+const DIRECT_SERVER_DISPLAYING = true
