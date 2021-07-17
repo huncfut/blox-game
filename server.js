@@ -74,7 +74,7 @@ const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
 		.filter(t => t[0].length)
 		.map(t => physics.doCollision(player, t[1]))
 		.reduce(physics.addVec)
-	// const newVelocity = {x: 1000, y: 1000}
+
 	return {
 		id,
     nick,
@@ -84,8 +84,7 @@ const getNewPlayerAfterBulletCollision = (player, bullets, collisions) => {
     velocity: newVelocity,
     acceleration: {x:0, y:0},
     bulletCD,
-    // stun: Date.now() + env.STUN_LENGTH,
-    stun: 0,
+    stun: Date.now() + env.STUN_LENGTH,
     r
 	}
 }
@@ -94,7 +93,9 @@ const getNewPlayerAfterWallCollision = (player, predPlayers, collisions) => {
   const {
     id, nick, held, lastCalcTime, position, velocity, bulletCD, r
   } = player
+
   const walls = collisions.filter(t => t[0] === id)[0][1]
+
   const newVelocity = walls.reduce((v, wall) => {
       const y = (wall === 'N' || wall === 'S') && -v.y*env.BOUNCE_COEFFICIENT || v.y
       const x = (wall === 'E' || wall === 'W') && -v.x*env.BOUNCE_COEFFICIENT || v.x
@@ -102,6 +103,7 @@ const getNewPlayerAfterWallCollision = (player, predPlayers, collisions) => {
     },
     velocity
   )
+
   return {
     id,
     nick,
@@ -120,9 +122,11 @@ const getNewPlayerAfterPlayerCollision = (player, predPlayers, collisions) => {
   const {
     id, nick, held, lastCalcTime, position, bulletCD, stun, r
   } = player
+
   const newVelocity = collisions.filter(t => t[0] === id)
     .map(t => physics.doCollision(predPlayers[t[0]], predPlayers[t[1]]))
     .reduce(physics.addVec)
+
   return {
     id,
     nick,
@@ -143,6 +147,7 @@ const getNewPlayerAfterShot = player => {
   const {
     id, nick, held, lastCalcTime, position, velocity, acceleration, stun, r
   } = player
+
 	return {
     id, nick, held, lastCalcTime, position, velocity, acceleration,
     bulletCD: Date.now() + env.BULLET_CD,
@@ -150,11 +155,7 @@ const getNewPlayerAfterShot = player => {
   }
 }
 
-
-setInterval(() => console.log(ticks.reduce((acc, val) => acc + val)/ticks.length), 1000)
-
-setInterval(() => {
-
+const gameLoop = () => {
 	t1 = Date.now()
 	ticks.push(t1-t0)
 	if(ticks.length >= 60) {
@@ -234,8 +235,13 @@ setInterval(() => {
 
 	// Update and override bullets for next tick
 	bullets = allBullets.filter(bullet => !bulletsToRemove.has(bullet))
+}
 
-}, 1000/env.TICK)
+// --- DISPLAY AVG TICK LENGTH ---
+setInterval(() => console.log(ticks.reduce((acc, val) => acc + val)/ticks.length), 1000)
+
+// --- GAME INTERVAL ---
+setInterval(gameLoop, 1000/env.TICK)
 
 setInterval(() => {
   R.mapObjIndexed((player, id) => {
